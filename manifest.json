@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Mosaic for Reddit: Media Wall",
+  "short_name": "Mosaic GX",
+  "version": "2.3.0",
+  "description": "Turn any subreddit, custom feed or user page on Reddit into a fast, unlimited media wall of images, galleries, GIFs and video.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.reddit.com/*",
+    "https://old.reddit.com/*"
+  ],
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Mosaic: open media wall",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.reddit.com/*",
+        "https://old.reddit.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

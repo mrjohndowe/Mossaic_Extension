@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mosaic</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="logo"><i></i></div>
+      <div class="title">
+        <b>MOSAIC</b>
+        <span id="ver"></span>
+      </div>
+      <span class="pill">∞ Unlimited</span>
+    </header>
+
+    <section class="card hero" id="hero">
+      <div class="where">
+        <span class="dot" id="dot"></span>
+        <div class="whereTxt">
+          <small id="whereLabel">Checking this tab…</small>
+          <b id="whereName">&nbsp;</b>
+        </div>
+      </div>
+      <button class="primary" id="openBtn" type="button">Open media wall</button>
+      <p class="note" id="note" hidden></p>
+    </section>
+
+    <section class="card">
+      <label class="lbl" for="srcInput">Open a different source</label>
+      <form class="srcForm" id="srcForm" autocomplete="off">
+        <input id="srcInput" type="text" spellcheck="false" placeholder="r/name, feed or Reddit URL" />
+        <button type="submit" class="go">Go</button>
+      </form>
+      <p class="err" id="srcErr" hidden></p>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="card">
+      <div class="cardHead">Quick settings</div>
+
+      <div class="row">
+        <span>Show</span>
+        <div class="seg" id="filterSeg">
+          <button type="button" data-v="all">All</button>
+          <button type="button" data-v="image">Images</button>
+          <button type="button" data-v="video">Videos</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <span>Sort</span>
+        <div class="pair">
+          <select id="sortSel">
+            <option value="hot">Hot</option>
+            <option value="new">New</option>
+            <option value="top">Top</option>
+            <option value="rising">Rising</option>
+          </select>
+          <select id="timeSel">
+            <option value="hour">Past hour</option>
+            <option value="day">Today</option>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+            <option value="year">This year</option>
+            <option value="all">All time</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <span>Columns</span>
+        <div class="pair">
+          <input id="colsRange" type="range" min="1" max="12" step="1" />
+          <output id="colsOut">4</output>
+        </div>
+      </div>
+
+      <div class="row">
+        <span class="stack">
+          Turbo mode
+          <small>Open automatically on supported Reddit pages</small>
+        </span>
+        <label class="switch">
+          <input id="turbo" type="checkbox" />
+          <i></i>
+        </label>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <button type="button" class="ghost" id="settingsBtn">⚙ All settings</button>
+      <div class="stats" id="stats"></div>
+    </footer>
+    <p class="hint">Tip: press <kbd>Alt</kbd> + <kbd>M</kbd> on a Reddit page, or <kbd>S</kbd> in the wall for settings.</p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
