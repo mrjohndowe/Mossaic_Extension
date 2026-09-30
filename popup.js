@@ -5,7 +5,7 @@
     set: (k, v) => new Promise((r) => chrome.storage.local.set({ [k]: v }, r)),
   };
 
-  const DEFAULT_WATCH = ["u/former-wolverine84/m/nothing_but_goths", "r/EarthPorn", "r/CityPorn", "r/wallpapers", "r/Cyberpunk"];
+  const DEFAULT_WATCH = ["u/former-wolverine84/m/nothing_but_goths"];
   const DEFAULT_PREFS = { filter: "all", sort: "hot", time: "day", cols: 4, turbo: false };
   const THEMES = {
     crimson: ["#ff1f5a", "#9b1dff"], gx: ["#fa1e4e", "#ff6a00"], violet: ["#8b5cf6", "#ec4899"], ocean: ["#22d3ee", "#3b82f6"],
