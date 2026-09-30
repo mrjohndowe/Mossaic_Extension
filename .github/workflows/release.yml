@@ -67,8 +67,24 @@ jobs:
           cp icons/16.png icons/48.png icons/128.png "$STAGE_DIR/icons/"
 
           trap 'rm -f "$KEY_PATH"' EXIT
-          printf '%s' "$CHROME_EXTENSION_PRIVATE_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          # Accept either a base64-encoded PEM (preferred for one-line secrets)
+          # or the raw multi-line PEM that GitHub's secret form also supports.
+          if ! printf '%s' "$CHROME_EXTENSION_PRIVATE_KEY_BASE64" | base64 --decode > "$KEY_PATH" 2>/dev/null \
+            || ! grep -q -- "-----BEGIN .*PRIVATE KEY-----" "$KEY_PATH"; then
+            printf '%s\n' "$CHROME_EXTENSION_PRIVATE_KEY_BASE64" > "$KEY_PATH"
+          fi
           chmod 600 "$KEY_PATH"
+
+          node - "$KEY_PATH" <<'NODE'
+          const crypto = require('crypto');
+          const fs = require('fs');
+          try {
+            crypto.createPrivateKey(fs.readFileSync(process.argv[2], 'utf8'));
+          } catch {
+            console.error('CHROME_EXTENSION_PRIVATE_KEY_BASE64 must contain a valid PEM private key or its base64 encoding.');
+            process.exit(1);
+          }
+          NODE
 
           npx --yes crx3@2.0.0 \
             -p "$KEY_PATH" \
