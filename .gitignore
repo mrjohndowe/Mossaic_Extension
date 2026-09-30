@@ -1,0 +1,6 @@
+# Browser-extension signing material must never enter source control.
+*.pem
+*.key
+
+# Local release output.
+release/

@@ -1,0 +1,93 @@
+name: Release Mosaic for Reddit
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Extension version to release (for example, 2.3.5)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-release:
+    name: Package browser extension and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the release source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+          if [[ "$VERSION" != "$MANIFEST_VERSION" ]]; then
+            echo "Release version $VERSION does not match manifest.json version $MANIFEST_VERSION." >&2
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed browser packages
+        env:
+          CHROME_EXTENSION_PRIVATE_KEY_BASE64: ${{ secrets.CHROME_EXTENSION_PRIVATE_KEY_BASE64 }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$CHROME_EXTENSION_PRIVATE_KEY_BASE64" ]]; then
+            echo "Missing CHROME_EXTENSION_PRIVATE_KEY_BASE64 repository secret." >&2
+            exit 1
+          fi
+
+          STAGE_DIR="$RUNNER_TEMP/mosaic-extension"
+          KEY_PATH="$RUNNER_TEMP/mosaic-extension.pem"
+          mkdir -p "$STAGE_DIR/icons" release
+          cp manifest.json background.js content.js content.css popup.html popup.css popup.js "$STAGE_DIR/"
+          cp icons/16.png icons/48.png icons/128.png "$STAGE_DIR/icons/"
+
+          trap 'rm -f "$KEY_PATH"' EXIT
+          printf '%s' "$CHROME_EXTENSION_PRIVATE_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+
+          npx --yes crx3@2.0.0 \
+            -p "$KEY_PATH" \
+            -o "release/Mosaic-for-Reddit-$VERSION.crx" \
+            -z "release/Mosaic-for-Reddit-$VERSION.zip" \
+            -- "$STAGE_DIR"
+
+          sha256sum "release/Mosaic-for-Reddit-$VERSION.crx" "release/Mosaic-for-Reddit-$VERSION.zip" > "release/SHA256SUMS.txt"
+
+      - name: Publish GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release/* --clobber
+          else
+            gh release create "$TAG" release/* --title "Mosaic for Reddit v$VERSION" --generate-notes
+          fi
