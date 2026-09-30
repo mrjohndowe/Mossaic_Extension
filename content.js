@@ -75,7 +75,7 @@
     // playback
     autoplay: true, startMuted: false, volume: 100, rememberVolume: true, loopVideo: true,
     // slideshow
-    slideshowSeconds: 4, slideshowSkipVideos: true, slideshowLoop: false,
+    slideshowSeconds: 4, slideshowSkipVideos: false, slideshowLoop: false,
     // launcher
     launcher: "bottom-right",
   };
@@ -726,6 +726,7 @@
     list.slice(i + 1, i + 1 + settings.preload).forEach((n) => {
       if (n?.type === "image") new Image().src = n.full;
     });
+    armSlideshowForCurrentMedia();
   }
 
   function markSeen(it) {
@@ -791,7 +792,7 @@
         a.muted = v.muted;
         rememberVolume(v);
       };
-      v.onended = () => a.pause();
+      v.addEventListener("ended", () => a.pause());
       v.__audio = a;
       v.appendChild(a);
     }
@@ -853,16 +854,44 @@
     stopMedia();
     show(ni);
   }
+  function clearSlideshowTimer() {
+    if (!state.slideshow?.timer) return;
+    clearTimeout(state.slideshow.timer);
+    state.slideshow.timer = null;
+  }
+  function scheduleSlideshowTick() {
+    if (!state.slideshow) return;
+    clearSlideshowTimer();
+    state.slideshow.timer = setTimeout(slideshowTick, Math.max(1, settings.slideshowSeconds) * 1000);
+  }
+  function armSlideshowForCurrentMedia() {
+    if (!state.slideshow) return;
+    const video = ui.stage.querySelector("video.mz-media");
+    if (!video) return scheduleSlideshowTick();
+    clearSlideshowTimer();
+    // A slideshow video must be allowed to finish once, even when the user's
+    // normal video preference is to loop it. The next slide is scheduled only
+    // after this exact video ends; manual next/previous controls still work.
+    video.loop = false;
+    video.addEventListener(
+      "ended",
+      () => {
+        if (state.slideshow && ui.stage.querySelector("video.mz-media") === video) slideshowTick();
+      },
+      { once: true }
+    );
+  }
   function toggleSlideshow() {
     const b = ui.root.querySelector(".mz-play");
     if (state.slideshow) {
-      clearInterval(state.slideshow);
+      clearSlideshowTimer();
       state.slideshow = null;
       b.textContent = "▶ Slideshow";
       return;
     }
     b.textContent = "❚❚ Pause";
-    state.slideshow = setInterval(slideshowTick, Math.max(1, settings.slideshowSeconds) * 1000);
+    state.slideshow = { timer: null };
+    armSlideshowForCurrentMedia();
   }
   function setZoom(z) {
     state.zoom = z;
