@@ -82,7 +82,8 @@ html.mz-lock, html.mz-lock body { overflow: hidden !important; }
 .mz-card:hover figcaption, .mz-card:hover .mz-cardtools { opacity: 1; }
 .mz-more { display: none; margin: 8px auto 24px; padding: 11px 26px; border: 0; border-radius: 10px; background: var(--mz-accent); color: var(--mz-on-accent); font-size: 13px; font-weight: 700; cursor: pointer; }
 .mz-more:hover { filter: brightness(1.1); }
-.mz-status { display: none; text-align: center; padding: 10px; font-size: 12px; color: #aaa; background: var(--mz-panel); border-top: 1px solid rgba(255,255,255,.05); }
+.mz-status { display: none; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; text-align: center; padding: 10px; font-size: 12px; color: #aaa; background: var(--mz-panel); border-top: 1px solid rgba(255,255,255,.05); }
+.mz-next-frame { color: var(--mz-accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 
 /* ---------- Viewer ---------- */
 .mz-viewer { position: absolute; inset: 0; display: none; background: rgba(5,4,8,.97); z-index: 5; }

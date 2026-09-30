@@ -322,7 +322,7 @@
         <button class="mz-btn mz-close" title="Close (Esc)">✕</button>
       </header>
       <main class="mz-grid"></main>
-      <div class="mz-status"></div>
+      <div class="mz-status"><span class="mz-status-message"></span><span class="mz-next-frame" aria-live="polite"></span></div>
       <div class="mz-viewer">
         <div class="mz-stage"></div>
         <button class="mz-nav mz-prev">‹</button><button class="mz-nav mz-next">›</button>
@@ -353,6 +353,8 @@
     Object.assign(ui, {
       grid: q(".mz-grid"),
       status: q(".mz-status"),
+      statusMessage: q(".mz-status-message"),
+      nextFrame: q(".mz-next-frame"),
       viewer: q(".mz-viewer"),
       stage: q(".mz-stage"),
       info: q(".mz-info"),
@@ -588,8 +590,15 @@
     if (ui.grid) render();
   }
   function setStatus(t) {
-    ui.status.textContent = t;
-    ui.status.style.display = t ? "block" : "none";
+    ui.statusMessage.textContent = t;
+    syncStatusVisibility();
+  }
+  function setNextFrameStatus(t) {
+    ui.nextFrame.textContent = t;
+    syncStatusVisibility();
+  }
+  function syncStatusVisibility() {
+    ui.status.style.display = ui.statusMessage.textContent || ui.nextFrame.textContent ? "flex" : "none";
   }
 
   function syncHeader() {
@@ -855,14 +864,33 @@
     show(ni);
   }
   function clearSlideshowTimer() {
-    if (!state.slideshow?.timer) return;
-    clearTimeout(state.slideshow.timer);
+    if (!state.slideshow) return;
+    if (state.slideshow.timer) clearTimeout(state.slideshow.timer);
+    if (state.slideshow.countdown) clearInterval(state.slideshow.countdown);
     state.slideshow.timer = null;
+    state.slideshow.countdown = null;
+    state.slideshow.nextAt = null;
+  }
+  function formatCountdown(ms) {
+    const seconds = Math.max(0, Math.ceil(ms / 1000));
+    const minutes = Math.floor(seconds / 60);
+    return `${String(minutes).padStart(2, "0")} minute${minutes === 1 ? "" : "s"} ${String(seconds % 60).padStart(2, "0")} second${seconds % 60 === 1 ? "" : "s"}`;
+  }
+  function updateImageCountdown() {
+    if (!state.slideshow?.nextAt) return;
+    setNextFrameStatus(`Next Frame in: ${formatCountdown(state.slideshow.nextAt - Date.now())}`);
   }
   function scheduleSlideshowTick() {
     if (!state.slideshow) return;
     clearSlideshowTimer();
-    state.slideshow.timer = setTimeout(slideshowTick, Math.max(1, settings.slideshowSeconds) * 1000);
+    const duration = Math.max(1, settings.slideshowSeconds) * 1000;
+    state.slideshow.nextAt = Date.now() + duration;
+    updateImageCountdown();
+    state.slideshow.countdown = setInterval(updateImageCountdown, 250);
+    state.slideshow.timer = setTimeout(() => {
+      clearSlideshowTimer();
+      slideshowTick();
+    }, duration);
   }
   function armSlideshowForCurrentMedia() {
     if (!state.slideshow) return;
@@ -873,10 +901,20 @@
     // normal video preference is to loop it. The next slide is scheduled only
     // after this exact video ends; manual next/previous controls still work.
     video.loop = false;
+    const updateVideoCountdown = () => {
+      if (Number.isFinite(video.duration)) setNextFrameStatus(`Next Frame in: ${formatCountdown((video.duration - video.currentTime) * 1000)}`);
+      else setNextFrameStatus("Next Frame: when video ends");
+    };
+    updateVideoCountdown();
+    video.addEventListener("loadedmetadata", updateVideoCountdown);
+    video.addEventListener("timeupdate", updateVideoCountdown);
     video.addEventListener(
       "ended",
       () => {
-        if (state.slideshow && ui.stage.querySelector("video.mz-media") === video) slideshowTick();
+        if (state.slideshow && ui.stage.querySelector("video.mz-media") === video) {
+          setNextFrameStatus("");
+          slideshowTick();
+        }
       },
       { once: true }
     );
@@ -886,11 +924,12 @@
     if (state.slideshow) {
       clearSlideshowTimer();
       state.slideshow = null;
+      setNextFrameStatus("");
       b.textContent = "▶ Slideshow";
       return;
     }
     b.textContent = "❚❚ Pause";
-    state.slideshow = { timer: null };
+    state.slideshow = { timer: null, countdown: null, nextAt: null };
     armSlideshowForCurrentMedia();
   }
   function setZoom(z) {
