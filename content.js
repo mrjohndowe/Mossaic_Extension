@@ -752,13 +752,20 @@
     let url = it.full || it.video || it.thumb;
     if (it.type === "gallery" && it.slides?.[slide]) url = it.slides[slide].src;
     if (!url) return;
-    const a = document.createElement("a");
-    a.href = url;
-    a.target = "_blank";
-    a.download = `${(it.subreddit || "reddit").replace(/[^A-Za-z0-9_-]+/g, "_")}-${it.id}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    let extension = "";
+    try {
+      extension = new URL(url).pathname.match(/\.(jpe?g|png|webp|gif|mp4|webm)$/i)?.[0] || "";
+    } catch {}
+    const filename = extension
+      ? `Mosaic/${(it.subreddit || "reddit").replace(/[^A-Za-z0-9_-]+/g, "_")}-${it.id}${extension}`
+      : undefined;
+    chrome.runtime.sendMessage({ type: "mosaic-download", url, filename }, (result) => {
+      if (chrome.runtime.lastError || !result?.ok) {
+        setStatus("Couldn't start the download. Check the extension's Downloads permission.");
+        return;
+      }
+      setStatus("Download started.");
+    });
   }
 
   function img(src) {
