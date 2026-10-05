@@ -1371,7 +1371,10 @@
     store.set("mz_seen", [...state.seen]);
   }
 
-  function exportData() {
+  async function exportData() {
+    const password = prompt("Enter a password to protect this backup (leave empty for no password):");
+    if (password === null) return;
+
     const data = {
       app: "mosaic-gx",
       version: 2,
@@ -1383,14 +1386,60 @@
       watchlist: state.watchlist,
       seen: [...state.seen],
     };
+
+    let exportObj;
+    if (password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const key = await deriveKey(password, salt);
+      const jsonStr = JSON.stringify(data, null, 2);
+      const encoder = new TextEncoder();
+      const encrypted = await crypto.subtle.encrypt(
+        { name: "AES-GCM", iv },
+        key,
+        encoder.encode(jsonStr)
+      );
+      exportObj = {
+        encrypted: true,
+        salt: Array.from(salt),
+        iv: Array.from(iv),
+        data: Array.from(new Uint8Array(encrypted)),
+      };
+    } else {
+      exportObj = { encrypted: false, ...data };
+    }
+
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" }));
     a.download = `mosaic-backup-${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-    toast("Backup downloaded");
+    toast(password ? "Encrypted backup downloaded" : "Backup downloaded");
+  }
+
+  async function deriveKey(password, salt) {
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      { name: "PBKDF2" },
+      false,
+      ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+      {
+        name: "PBKDF2",
+        salt,
+        iterations: 100000,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
   }
 
   function pickImport() {
@@ -1401,11 +1450,37 @@
     inp.click();
   }
 
-  function importData(file) {
+  async function importData(file) {
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        const d = JSON.parse(String(reader.result));
+        const parsed = JSON.parse(String(reader.result));
+        let d = parsed;
+
+        if (parsed.encrypted) {
+          const password = prompt("Enter the password to decrypt this backup:");
+          if (!password) {
+            toast("Password required for encrypted backup");
+            return;
+          }
+          try {
+            const salt = new Uint8Array(parsed.salt);
+            const iv = new Uint8Array(parsed.iv);
+            const encryptedData = new Uint8Array(parsed.data);
+            const key = await deriveKey(password, salt);
+            const decrypted = await crypto.subtle.decrypt(
+              { name: "AES-GCM", iv },
+              key,
+              encryptedData
+            );
+            const decoder = new TextDecoder();
+            d = JSON.parse(decoder.decode(decrypted));
+          } catch (e) {
+            toast("Wrong password or corrupted backup");
+            return;
+          }
+        }
+
         if (d?.app !== "mosaic-gx") throw new Error("not a Mosaic backup");
         Object.assign(settings, sanitizeSettings(d.settings));
         if (d.prefs && typeof d.prefs === "object") {
