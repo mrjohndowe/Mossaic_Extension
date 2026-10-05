@@ -1,6 +1,6 @@
 {
-    "actions/checkout": "v4",
-    "actions/setup-node": "v4",
-    "actions/upload-pages-artifact": "v4",
-    "actions/deploy-pages":"v4"
+    "actions/checkout": "v5",
+    "actions/setup-node": "v5",
+    "actions/upload-pages-artifact": "v5",
+    "actions/deploy-pages":"v5"
 }
