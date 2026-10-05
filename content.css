@@ -92,12 +92,20 @@ html.mz-lock body {
 
 .mz-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
   background: var(--mz-panel);
   border-bottom: 1px solid var(--mz-accent-line);
+  overflow-x: auto;
+}
+.mz-bar::-webkit-scrollbar {
+  height: 6px;
+}
+.mz-bar::-webkit-scrollbar-thumb {
+  background: var(--mz-accent-line);
+  border-radius: 3px;
 }
 .mz-brand {
   display: flex;

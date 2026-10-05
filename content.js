@@ -49,7 +49,7 @@
     hidden: new Set(),
     seen: new Set(),
     favs: {},
-    watchlist: ["u/former-wolverine84/m/nothing_but_goths", "r/EarthPorn", "r/CityPorn", "r/wallpapers", "r/Cyberpunk"],
+    watchlist: [""],
     showHidden: false,
     favView: false,
     index: -1,
@@ -62,7 +62,7 @@
   // ---------- Settings model ----------
   const DEFAULTS = {
     // appearance
-    theme: "crimson", customAccent: "#ff1f5a", darkness: "normal",
+    theme: "midnight", customAccent: "#ff1f5a", darkness: "dark",
     // wall layout
     gap: 10, radius: 10, cardShape: "smart", captions: "hover", badges: true, hoverZoom: true, dimSeen: true,
     // content filters
@@ -73,9 +73,9 @@
     // viewer
     fit: "contain", wheelAction: "navigate", maxZoom: 5, preload: 2, showInfo: true, backdropClose: true,
     // playback
-    autoplay: true, startMuted: false, volume: 100, rememberVolume: true, loopVideo: true,
+    autoplay: true, startMuted: true, volume: 15, rememberVolume: true, loopVideo: false,
     // slideshow
-    slideshowSeconds: 4, slideshowSkipVideos: false, slideshowLoop: false,
+    slideshowSeconds: 10, slideshowSkipVideos: false, slideshowLoop: false,
     // launcher
     launcher: "bottom-right",
   };
@@ -91,6 +91,7 @@
     emerald: ["Emerald", "#10b981", "#06b6d4"],
     sunset: ["Sunset", "#f97316", "#ec4899"],
     gold: ["Gold", "#fbbf24", "#f97316"],
+    midnight: ["midnight", "#2c2c2c", "#320000"]
   };
   // True when white text would be hard to read on this color (WCAG relative luminance).
   const isLight = (hex) => {
