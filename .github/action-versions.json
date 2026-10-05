@@ -1,0 +1,6 @@
+{
+    "actions/checkout": "v4",
+    "actions/setup-node": "v4",
+    "actions/upload-pages-artifact": "v4",
+    "actions/deploy-pages":"v4"
+}

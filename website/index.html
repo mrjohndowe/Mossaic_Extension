@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mosaic for Reddit — turn any subreddit into an unlimited media wall</title>
+<meta name="description" content="Mosaic is a browser extension that turns any subreddit, custom feed or user page on Reddit into a fast, unlimited masonry wall of images, galleries, GIFs and video." />
+<meta name="theme-color" content="#0F1215" />
+<link rel="icon" type="image/png" href="/images/mosaic-icon.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="/src/css/styles.css" />
+</head>
+
+<body>
+<a class="skip" href="#wall">Skip to the demo wall</a>
+
+<!-- ambient layers -->
+<div class="grain" aria-hidden="true"></div>
+<div class="scanline" aria-hidden="true"></div>
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- ══════════════ TOP BAR ══════════════ -->
+<header class="topbar" id="topbar">
+  <div class="topbar__in">
+    <a class="brand" href="#top" aria-label="Mosaic for Reddit, home">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1"  y="1"  width="13" height="17" rx="2.5" fill="#FF4A1C"/>
+        <rect x="17" y="1"  width="14" height="9"  rx="2.5" fill="#FFB020"/>
+        <rect x="17" y="13" width="14" height="18" rx="2.5" fill="#35C4B5"/>
+        <rect x="1"  y="21" width="13" height="10" rx="2.5" fill="#F4F1EA" opacity=".85"/>
+      </svg>
+      <span class="brand__txt">Mosaic<em>/</em>Reddit</span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="#wall">The wall</a>
+      <a href="#compare">Before / after</a>
+      <a href="#viewer">Viewer</a>
+      <a href="#tune">Tuning</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+
+    <div class="topbar__end">
+      <a class="btn btn--ghost btn--sm" href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.79-.26.79-.58v-2.23c-3.34.73-4.03-1.42-4.03-1.42-.55-1.39-1.33-1.76-1.33-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.49 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.62-5.48 5.92.43.37.82 1.1.82 2.22v3.29c0 .32.19.7.8.58A12.01 12.01 0 0 0 24 12c0-6.63-5.37-12-12-12Z"/></svg>
+        <span>mrjohndowe</span>
+      </a>
+      <a class="btn btn--solid btn--sm" href="#install">Load unpacked</a>
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><i></i><i></i></button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-nav" id="mobileNav">
+  <a href="#wall">The wall</a>
+  <a href="#compare">Before / after</a>
+  <a href="#media">Media types</a>
+  <a href="#viewer">Viewer</a>
+  <a href="#keys">Shortcuts</a>
+  <a href="#tune">Tuning</a>
+  <a href="#privacy">Privacy</a>
+  <a href="#where">Coverage</a>
+  <a href="#install">Install</a>
+  <a href="#pricing">Pricing</a>
+  <a href="#faq">FAQ</a>
+  <a href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">Repository</a>
+</div>
+
+<main id="top">
+
+<!-- ══════════════ 01 · THE WALL (hero) ══════════════ -->
+<section class="hero" id="wall">
+  <div class="hero__aura" aria-hidden="true"></div>
+  <div class="hero__rules" aria-hidden="true"></div>
+
+  <div class="wrap hero__grid">
+    <!-- copy column -->
+    <div class="hero__copy">
+      <p class="eyebrow reveal">
+        <span class="dot dot--live"></span> Browser extension · Chromium · v0.x early build
+      </p>
+
+      <h1 class="hero__title">
+        <span class="reveal d1">Any subreddit</span>
+        <span class="reveal d2">becomes an</span>
+        <span class="hero__title-accent reveal d3">unlimited wall.</span>
+      </h1>
+
+      <p class="lede reveal d4">
+        Mosaic pulls images, galleries, GIFs and video out of any subreddit, custom feed or
+        user page and lays them into one continuous masonry grid — no clicking into posts,
+        one at a time, ever again.
+      </p>
+
+      <div class="hero__cta reveal d5">
+        <a class="btn btn--solid" href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">
+          Get the source
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 8h11M9 4l4 4-4 4"/></svg>
+        </a>
+        <a class="btn btn--line" href="#compare">See what changes</a>
+      </div>
+
+      <dl class="hero__stats reveal d6">
+        <div><dt>Media types</dt><dd>6</dd></div>
+        <div><dt>Requests tracked</dt><dd>0</dd></div>
+        <div><dt>Accounts needed</dt><dd>0</dd></div>
+        <div><dt>Price today</dt><dd>Free</dd></div>
+      </dl>
+
+      <p class="hero__hint reveal d7">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 1.8 2.6 4v4.1c0 3.2 2.3 5.4 5.4 6.1 3.1-.7 5.4-2.9 5.4-6.1V4L8 1.8Z"/><path fill="none" stroke="currentColor" stroke-width="1.5" d="m5.9 8 1.5 1.6 2.8-3"/></svg>
+        The panel on the right is a working model. Filter it, scroll it, click a tile.
+      </p>
+    </div>
+
+    <!-- live demo column -->
+    <div class="hero__demo reveal d3">
+      <div class="browser">
+        <div class="browser__bar">
+          <span class="browser__dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="browser__url">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M8 1.8 2.6 4v4.1c0 3.2 2.3 5.4 5.4 6.1 3.1-.7 5.4-2.9 5.4-6.1V4L8 1.8Z"/></svg>
+            reddit.com/r/EarthPorn
+          </span>
+          <span class="browser__badge"><i class="dot dot--live"></i> Mosaic on</span>
+        </div>
+
+        <div class="browser__tools">
+          <div class="chips" id="filters" role="group" aria-label="Filter media type">
+            <button class="chip is-on" data-filter="all">All <b>20</b></button>
+            <button class="chip" data-filter="image">Images</button>
+            <button class="chip" data-filter="gallery">Galleries</button>
+            <button class="chip" data-filter="gif">GIFs</button>
+            <button class="chip" data-filter="video">Video</button>
+          </div>
+          <div class="browser__meta"><span id="tileCount">20</span> items · sorted by hot</div>
+        </div>
+
+        <div class="wall" id="wallGrid" tabindex="0" aria-label="Mosaic media wall demo"></div>
+
+        <div class="browser__foot">
+          <span class="pulse-row"><i class="spinner"></i> lazy-loading next 20…</span>
+          <span class="mono">cols 4 · gap 8px</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ TICKER ══════════════ -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker__track">
+    <span>No accounts</span><span class="ticker__sep">◆</span>
+    <span>No cloud sync</span><span class="ticker__sep">◆</span>
+    <span>No analytics</span><span class="ticker__sep">◆</span>
+    <span>No telemetry</span><span class="ticker__sep">◆</span>
+    <span>Runs locally</span><span class="ticker__sep">◆</span>
+    <span>Free during development</span><span class="ticker__sep">◆</span>
+    <span>Infinite scroll</span><span class="ticker__sep">◆</span>
+    <span>Keyboard first</span><span class="ticker__sep">◆</span>
+  </div>
+  <div class="ticker__track">
+    <span>No accounts</span><span class="ticker__sep">◆</span>
+    <span>No cloud sync</span><span class="ticker__sep">◆</span>
+    <span>No analytics</span><span class="ticker__sep">◆</span>
+    <span>No telemetry</span><span class="ticker__sep">◆</span>
+    <span>Runs locally</span><span class="ticker__sep">◆</span>
+    <span>Free during development</span><span class="ticker__sep">◆</span>
+    <span>Infinite scroll</span><span class="ticker__sep">◆</span>
+    <span>Keyboard first</span><span class="ticker__sep">◆</span>
+  </div>
+</div>
+
+<!-- ══════════════ 02 · BEFORE / AFTER ══════════════ -->
+<section class="sect" id="compare">
+  <div class="wrap">
+    <div class="sect__head sect__head--split reveal">
+      <div>
+        <p class="eyebrow"><span class="tag tag--amber">02</span> The difference</p>
+        <h2 class="h2">One post at a time<br />or <span class="u">the whole feed</span> at once.</h2>
+      </div>
+      <p class="sect__note">
+        Reddit's default list gives you a thumbnail and a title, then makes you click.
+        Mosaic gives you the media itself, tiled edge to edge, forever.
+        <strong>Drag the handle →</strong>
+      </p>
+    </div>
+
+    <div class="ba reveal" id="ba">
+      <!-- BEFORE -->
+      <div class="ba__side ba__side--before">
+        <span class="ba__label ba__label--l">Reddit, default</span>
+        <div class="fakefeed" aria-hidden="true">
+          <article class="fpost">
+            <div class="fpost__vote"><b>▲</b><span>12.4k</span></div>
+            <div class="fpost__thumb"></div>
+            <div class="fpost__body">
+              <p class="fpost__meta">r/EarthPorn · Posted by u/wanderer · 6h</p>
+              <h3>Misty ridge at first light, Dolomites [3024×4032]</h3>
+              <p class="fpost__link">i.redd.it/a91k…jpg</p>
+              <div class="fpost__acts"><span>428 comments</span><span>Share</span><span>Save</span></div>
+            </div>
+          </article>
+          <article class="fpost">
+            <div class="fpost__vote"><b>▲</b><span>8.1k</span></div>
+            <div class="fpost__thumb"></div>
+            <div class="fpost__body">
+              <p class="fpost__meta">r/pics · Posted by u/lowlight · 9h</p>
+              <h3>Neon alley in Tokyo after the rain</h3>
+              <p class="fpost__link">i.redd.it/77qp…jpg</p>
+              <div class="fpost__acts"><span>211 comments</span><span>Share</span><span>Save</span></div>
+            </div>
+          </article>
+          <article class="fpost">
+            <div class="fpost__vote"><b>▲</b><span>3.9k</span></div>
+            <div class="fpost__thumb"></div>
+            <div class="fpost__body">
+              <p class="fpost__meta">r/Art · Posted by u/pigment · 12h</p>
+              <h3>Acrylic study, four panels — swipe for process</h3>
+              <p class="fpost__link">gallery · 4 images</p>
+              <div class="fpost__acts"><span>96 comments</span><span>Share</span><span>Save</span></div>
+            </div>
+          </article>
+          <article class="fpost">
+            <div class="fpost__vote"><b>▲</b><span>1.2k</span></div>
+            <div class="fpost__thumb"></div>
+            <div class="fpost__body">
+              <p class="fpost__meta">r/oddlysatisfying · 1d</p>
+              <h3>Paint mixing, looped</h3>
+              <p class="fpost__link">v.redd.it/x2…mp4</p>
+              <div class="fpost__acts"><span>44 comments</span><span>Share</span><span>Save</span></div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <!-- AFTER -->
+      <div class="ba__side ba__side--after">
+        <span class="ba__label ba__label--r">With Mosaic</span>
+        <div class="ba__wall" id="baWall" aria-hidden="true"></div>
+      </div>
+
+      <div class="ba__handle" id="baHandle" role="separator" aria-orientation="vertical"
+           aria-label="Compare Reddit default with Mosaic" aria-valuenow="50" tabindex="0">
+        <span class="ba__line"></span>
+        <span class="ba__grip"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="m9 6-5 6 5 6M15 6l5 6-5 6"/></svg></span>
+      </div>
+    </div>
+
+    <ul class="ba__legend reveal">
+      <li><b>4 clicks</b> to see 4 posts</li>
+      <li class="ba__legend--arrow">→</li>
+      <li><b>0 clicks</b> to see 400</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 03 · MEDIA TYPES (bento) ══════════════ -->
+<section class="sect sect--tight" id="media">
+  <div class="wrap">
+    <div class="sect__head reveal">
+      <p class="eyebrow"><span class="tag tag--teal">03</span> Supported content</p>
+      <h2 class="h2">Nearly every media type Reddit can throw at it.</h2>
+    </div>
+
+    <div class="bento">
+      <article class="bento__card bento__card--hero reveal">
+        <div class="bento__shot" id="galleryShot">
+          <div class="gstack">
+            <img alt="" loading="lazy" src="https://images.pexels.com/photos/14595972/pexels-photo-14595972.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=520&h=640" />
+            <img alt="" loading="lazy" src="https://images.pexels.com/photos/16415242/pexels-photo-16415242.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=520&h=640" />
+            <img alt="" loading="lazy" src="https://images.pexels.com/photos/16470356/pexels-photo-16470356.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=520&h=640" />
+          </div>
+        </div>
+        <div class="bento__txt">
+          <span class="pill pill--orange">Galleries</span>
+          <h3 class="h3">Multi-image posts, flattened into the grid</h3>
+          <p>Reddit galleries normally hide behind a carousel. Mosaic reads every slide and
+          streams them straight into the wall — with a slide counter on the tile so you know
+          there's more inside.</p>
+        </div>
+      </article>
+
+      <article class="bento__card reveal d1">
+        <span class="pill pill--paper">Images</span>
+        <h3 class="h4">Full-resolution stills</h3>
+        <p>i.redd.it, previews, and external hosts — thumbnailed fast, opened at original size.</p>
+        <span class="bento__num">01</span>
+      </article>
+
+      <article class="bento__card reveal d2">
+        <span class="pill pill--teal">GIFs</span>
+        <h3 class="h4">Animated GIFs</h3>
+        <p>Plays inline in the tile. No hover-to-preview, no waiting on a page load.</p>
+        <span class="bento__num">02</span>
+      </article>
+
+      <article class="bento__card bento__card--wide reveal d3">
+        <span class="pill pill--amber">Video</span>
+        <h3 class="h4">Reddit-hosted &amp; external video</h3>
+        <p>v.redd.it playback with your rules: autoplay, muted, looped, at the speed you pick —
+        plus controls on the ones that support it.</p>
+        <div class="miniwave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </article>
+
+      <article class="bento__card reveal d4">
+        <span class="pill pill--line">Filters</span>
+        <h3 class="h4">Show only what you came for</h3>
+        <p>Filter by media type, sort order, and NSFW visibility (subject to Reddit's own settings).</p>
+        <span class="bento__num">04</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 04 · VIEWER (sticky scroll-driven) ══════════════ -->
+<section class="sect viewer" id="viewer">
+  <div class="wrap viewer__grid">
+
+    <!-- sticky mock -->
+    <div class="viewer__sticky">
+      <div class="vstage" id="vstage">
+        <div class="vstage__bar">
+          <span class="vstage__sub" id="vSub">r/EarthPorn</span>
+          <span class="vstage__idx" id="vIdx">04 / 20</span>
+          <span class="vstage__tools">
+            <button class="vtool" data-tool="zoomout" aria-label="Zoom out">−</button>
+            <button class="vtool" data-tool="zoomin" aria-label="Zoom in">+</button>
+            <button class="vtool" data-tool="fit" aria-label="Fit to screen">⤢</button>
+            <button class="vtool" data-tool="full" aria-label="Fullscreen">⛶</button>
+          </span>
+        </div>
+
+        <div class="vstage__screen" id="vScreen">
+          <img id="vImg" alt="Preview of the Mosaic media viewer"
+               src="https://images.pexels.com/photos/39902833/pexels-photo-39902833.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620" />
+          <span class="vstage__zoom" id="vZoom">100%</span>
+          <span class="vstage__mode" id="vMode">FIT</span>
+          <button class="vnav vnav--prev" id="vPrev" aria-label="Previous media">
+            <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="m14 6-6 6 6 6"/></svg>
+          </button>
+          <button class="vnav vnav--next" id="vNext" aria-label="Next media">
+            <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="m10 6 6 6-6 6"/></svg>
+          </button>
+          <span class="vstage__play" id="vPlay" hidden>▶</span>
+        </div>
+
+        <div class="vstage__foot">
+          <div class="vslideshow"><i id="vBar"></i></div>
+          <div class="vstage__stats">
+            <span>▲ 12.4k</span><span>💬 428</span><span id="vMeta">3024 × 4032 · i.redd.it</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- steps -->
+    <div class="viewer__steps">
+      <div class="sect__head reveal">
+        <p class="eyebrow"><span class="tag tag--orange">04</span> The viewer</p>
+        <h2 class="h2">Click once.<br />Everything else is <span class="u">keyboard</span>.</h2>
+        <p class="sect__note">Scroll — the panel on the left reacts to each capability below.</p>
+      </div>
+
+      <article class="step is-active" data-step="open" data-img="https://images.pexels.com/photos/39902833/pexels-photo-39902833.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620">
+        <span class="step__n">01</span>
+        <h3 class="h4">Opens full-bleed, out of the way</h3>
+        <p>Any tile lifts into a distraction-free viewer. Chrome disappears, the media fills the frame,
+        and the post's score and thread stay one glance away.</p>
+      </article>
+
+      <article class="step" data-step="keys" data-img="https://images.pexels.com/photos/13590914/pexels-photo-13590914.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620">
+        <span class="step__n">02</span>
+        <h3 class="h4">Arrows, mouse, or both</h3>
+        <p><kbd>←</kbd> <kbd>→</kbd> to move through the feed, <kbd>Esc</kbd> to drop back into the wall.
+        On-screen chevrons mirror the same actions for trackpad people.</p>
+      </article>
+
+      <article class="step" data-step="zoom" data-img="https://images.pexels.com/photos/38332829/pexels-photo-38332829.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620">
+        <span class="step__n">03</span>
+        <h3 class="h4">Zoom, fit, original resolution</h3>
+        <p><kbd>+</kbd> and <kbd>−</kbd> step the zoom, <kbd>F</kbd> flips fullscreen, and fit-to-screen
+        hands you the untouched original whenever you want the pixels.</p>
+      </article>
+
+      <article class="step" data-step="slide" data-img="https://images.pexels.com/photos/29511840/pexels-photo-29511840.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620">
+        <span class="step__n">04</span>
+        <h3 class="h4">Slideshow, on your interval</h3>
+        <p><kbd>Space</kbd> starts and stops it. Set the delay in Settings, lean back, and let the
+        wall run itself.</p>
+      </article>
+
+      <article class="step" data-step="video" data-img="https://images.pexels.com/photos/30641513/pexels-photo-30641513.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=900&h=620">
+        <span class="step__n">05</span>
+        <h3 class="h4">Video with real controls</h3>
+        <p>Autoplay, mute, loop and playback speed are all yours. Reddit-hosted clips and supported
+        external video behave the same way.</p>
+      </article>
+
+      <a class="btn btn--line step__cta" href="#keys">See every shortcut</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 05 · KEYBOARD (interactive) ══════════════ -->
+<section class="sect keys" id="keys">
+  <div class="wrap">
+    <div class="sect__head sect__head--split reveal">
+      <div>
+        <p class="eyebrow"><span class="tag tag--paper">05</span> Shortcuts</p>
+        <h2 class="h2">Press them. Right now.</h2>
+      </div>
+      <p class="sect__note">This page listens. Hit a key while this section is on screen and the
+      matching row fires — the same binding drives the real viewer.</p>
+    </div>
+
+    <div class="keys__grid">
+      <ul class="keylist" id="keylist">
+        <li data-key="ArrowLeft"><span class="keycap">←</span><span class="keydesc">Previous media</span><span class="keyhit">fired</span></li>
+        <li data-key="ArrowRight"><span class="keycap">→</span><span class="keydesc">Next media</span><span class="keyhit">fired</span></li>
+        <li data-key="Escape"><span class="keycap">Esc</span><span class="keydesc">Close viewer</span><span class="keyhit">fired</span></li>
+        <li data-key="KeyF"><span class="keycap">F</span><span class="keydesc">Toggle fullscreen</span><span class="keyhit">fired</span></li>
+        <li data-key="Equal"><span class="keycap">+</span><span class="keydesc">Zoom in</span><span class="keyhit">fired</span></li>
+        <li data-key="Minus"><span class="keycap">−</span><span class="keydesc">Zoom out</span><span class="keyhit">fired</span></li>
+        <li data-key="Space"><span class="keycap">Space</span><span class="keydesc">Play / pause slideshow or video</span><span class="keyhit">fired</span></li>
+      </ul>
+
+      <aside class="keys__panel reveal">
+        <p class="mono keys__label">last input</p>
+        <div class="keys__read" id="keyRead">
+          <span class="keys__cap" id="keyCap">—</span>
+          <span class="keys__act" id="keyAct">waiting for a keypress</span>
+        </div>
+        <p class="keys__foot">Additional shortcuts can be re-mapped through Settings → Keyboard Shortcuts.
+        Everything is stored locally, so your bindings travel with the browser profile — not with an account.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 06 · TUNING (live settings) ══════════════ -->
+<section class="sect" id="tune">
+  <div class="wrap tune__grid">
+    <div class="tune__panel reveal">
+      <div class="panel__head">
+        <span class="panel__title">Mosaic Settings</span>
+        <span class="panel__badge">stored locally</span>
+      </div>
+
+      <div class="panel__body">
+        <p class="mono panel__group">Layout</p>
+
+        <label class="ctrl">
+          <span class="ctrl__name">Column count</span>
+          <span class="ctrl__val mono" id="colsVal">4</span>
+          <input type="range" id="cols" min="2" max="7" step="1" value="4" />
+        </label>
+
+        <label class="ctrl">
+          <span class="ctrl__name">Grid spacing</span>
+          <span class="ctrl__val mono" id="gapVal">8px</span>
+          <input type="range" id="gap" min="0" max="28" step="2" value="8" />
+        </label>
+
+        <label class="ctrl">
+          <span class="ctrl__name">Tile corner radius</span>
+          <span class="ctrl__val mono" id="radVal">6px</span>
+          <input type="range" id="rad" min="0" max="24" step="1" value="6" />
+        </label>
+
+        <p class="mono panel__group">Video playback</p>
+        <div class="switches">
+          <button class="sw is-on" data-sw="autoplay" aria-pressed="true"><i></i>Autoplay</button>
+          <button class="sw is-on" data-sw="mute" aria-pressed="true"><i></i>Muted</button>
+          <button class="sw" data-sw="loop" aria-pressed="false"><i></i>Loop</button>
+        </div>
+
+        <p class="mono panel__group">Feed</p>
+        <div class="switches">
+          <button class="sw is-on" data-sw="infinite" aria-pressed="true"><i></i>Infinite scroll</button>
+          <button class="sw is-on" data-sw="badges" aria-pressed="true"><i></i>Type badges</button>
+          <button class="sw" data-sw="nsfw" aria-pressed="false"><i></i>Show NSFW</button>
+        </div>
+
+        <p class="mono panel__group">Launcher</p>
+        <div class="radios" id="launcher">
+          <button class="radio is-on" data-launch="float" aria-pressed="true">Floating</button>
+          <button class="radio" data-launch="toolbar" aria-pressed="false">Toolbar</button>
+          <button class="radio" data-launch="hotkey" aria-pressed="false">Hotkey only</button>
+        </div>
+
+        <button class="btn btn--line btn--sm panel__reset" id="resetTune">Reset to defaults</button>
+      </div>
+    </div>
+
+    <div class="tune__preview reveal d1">
+      <p class="eyebrow"><span class="tag tag--teal">06</span> Live preview</p>
+      <h2 class="h2 h2--sm">Every slider moves the real thing.</h2>
+      <p class="sect__note">Layout density, spacing, radius, playback behaviour, filters, launcher style —
+      the wall beside these controls is wired to them.</p>
+
+      <div class="pwall-wrap" id="pwallWrap">
+        <div class="pwall" id="pwall"></div>
+        <div class="pwall__more" id="pwallMore"><i class="spinner"></i> loading more…</div>
+      </div>
+
+      <div class="launchfab" id="launchFab">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect x="2" y="2" width="12" height="16" rx="2" fill="currentColor"/>
+          <rect x="17" y="2" width="13" height="8" rx="2" fill="currentColor" opacity=".7"/>
+          <rect x="17" y="13" width="13" height="17" rx="2" fill="currentColor" opacity=".5"/>
+          <rect x="2" y="21" width="12" height="9" rx="2" fill="currentColor" opacity=".85"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 07 · PRIVACY (light section) ══════════════ -->
+<section class="sect light" id="privacy">
+  <div class="wrap">
+    <div class="light__grid">
+      <div class="light__copy">
+        <p class="eyebrow eyebrow--dark reveal"><span class="tag tag--ink">07</span> Privacy</p>
+        <h2 class="h2 h2--dark reveal d1">Nothing leaves<br />the tab it was born in.</h2>
+        <p class="lede lede--dark reveal d2">
+          Mosaic is a content script and a settings file. It has no backend to phone,
+          no account to create, and no reason to know who you are.
+        </p>
+
+        <ul class="never reveal d3">
+          <li><span>collects personal information</span></li>
+          <li><span>collects browsing history</span></li>
+          <li><span>sends analytics</span></li>
+          <li><span>includes telemetry</span></li>
+          <li><span>tracks user behaviour</span></li>
+          <li><span>requires an online account</span></li>
+        </ul>
+        <p class="never__cap reveal d4">Mosaic does <em>not</em> — any of the above.</p>
+      </div>
+
+      <div class="light__meters">
+        <div class="meter reveal">
+          <span class="meter__num" data-count="0" data-suffix="">0</span>
+          <span class="meter__lbl">bytes sent to a Mosaic server</span>
+          <span class="meter__bar"><i style="--w:0%"></i></span>
+        </div>
+        <div class="meter reveal d1">
+          <span class="meter__num" data-count="0">0</span>
+          <span class="meter__lbl">third-party trackers bundled</span>
+          <span class="meter__bar"><i style="--w:0%"></i></span>
+        </div>
+        <div class="meter reveal d2">
+          <span class="meter__num" data-count="100" data-suffix="%">0%</span>
+          <span class="meter__lbl">of preferences stored in browser storage</span>
+          <span class="meter__bar"><i style="--w:100%"></i></span>
+        </div>
+
+        <div class="flow reveal d3" aria-hidden="true">
+          <span class="flow__node flow__node--you">You</span>
+          <span class="flow__wire flow__wire--ok"><i></i></span>
+          <span class="flow__node">reddit.com</span>
+          <span class="flow__wire flow__wire--dead"><i>✕</i></span>
+          <span class="flow__node flow__node--dead">analytics</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="perf reveal">
+      <p class="mono perf__label">Performance budget</p>
+      <ul class="perf__list">
+        <li><b>Lazy loading</b><span>tiles decode only near the viewport</span></li>
+        <li><b>Responsive rendering</b><span>columns recompute on resize, not on scroll</span></li>
+        <li><b>Efficient image loading</b><span>preview URLs in the grid, originals in the viewer</span></li>
+        <li><b>Memory-conscious caching</b><span>off-screen media is released, not hoarded</span></li>
+        <li><b>Smooth scrolling</b><span>composited transforms, no layout thrash</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 08 · BROWSE ANYWHERE ══════════════ -->
+<section class="sect sect--tight" id="where">
+  <div class="wrap">
+    <div class="sect__head reveal">
+      <p class="eyebrow"><span class="tag tag--amber">08</span> Coverage</p>
+      <h2 class="h2">It follows you around Reddit.</h2>
+    </div>
+    <ul class="where reveal d1">
+      <li><b>Subreddits</b><i>r/anything</i></li>
+      <li><b>User profiles</b><i>u/somebody</i></li>
+      <li><b>Custom feeds</b><i>your front page, remixed</i></li>
+      <li><b>Multi-reddits</b><i>r/a+r/b+r/c</i></li>
+      <li><b>Home feed</b><i>reddit.com</i></li>
+      <li><b>Popular</b><i>reddit.com/r/popular</i></li>
+      <li><b>Search results</b><i>?q=…</i></li>
+      <li><b>Saved posts</b><i>your library</i></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 09 · INSTALL ══════════════ -->
+<section class="sect" id="install">
+  <div class="wrap install__grid">
+    <div class="install__copy">
+      <p class="eyebrow reveal"><span class="tag tag--orange">09</span> Installation</p>
+      <h2 class="h2 reveal d1">Unpacked in<br />about ninety seconds.</h2>
+      <p class="sect__note reveal d2">
+        Mosaic ships as an unpacked extension while it's in active development. Grab the folder
+        from the repository, point your browser at it, done.
+      </p>
+
+      <div class="install__note reveal d3">
+        <p class="mono">Developer mode is required — it's the only way Chromium lets you load a
+        folder that isn't from a store.</p>
+      </div>
+
+      <div class="compat reveal d4">
+        <p class="mono compat__label">Browser compatibility</p>
+        <ul>
+          <li><span class="tick">✓</span> Google Chrome</li>
+          <li><span class="tick">✓</span> Microsoft Edge</li>
+          <li><span class="tick">✓</span> Chromium-based browsers</li>
+          <li class="compat--off"><span class="tick">—</span> Firefox / Safari (not yet)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="install__steps reveal d2">
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab is-on" role="tab" aria-selected="true" data-tab="chrome">Chrome</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="edge">Edge</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="other">Other Chromium</button>
+      </div>
+
+      <div class="tabpanel is-on" data-panel="chrome" role="tabpanel">
+        <ol class="steps">
+          <li><span>1</span><div><b>Download or clone the extension</b><p>Get the Mosaic folder from the repository.</p></div></li>
+          <li><span>2</span><div><b>Open the extensions page</b><p>Paste this into the address bar and hit enter.</p>
+            <button class="copy" data-copy="chrome://extensions"><code>chrome://extensions</code><i>copy</i></button></li>
+          <li><span>3</span><div><b>Enable Developer Mode</b><p>Top-right toggle on the extensions page.</p></div></li>
+          <li><span>4</span><div><b>Select “Load unpacked”</b><p>A button appears once developer mode is on.</p></div></li>
+          <li><span>5</span><div><b>Choose the Mosaic folder</b><p>The icon lands in your toolbar. Open any subreddit.</p></div></li>
+        </ol>
+      </div>
+
+      <div class="tabpanel" data-panel="edge" role="tabpanel">
+        <ol class="steps">
+          <li><span>1</span><div><b>Get the extension folder</b><p>Download or clone it from the repository.</p></div></li>
+          <li><span>2</span><div><b>Open Edge extensions</b><p>Address bar, then enter.</p>
+            <button class="copy" data-copy="edge://extensions"><code>edge://extensions</code><i>copy</i></button></li>
+          <li><span>3</span><div><b>Enable Developer Mode</b><p>Bottom-left toggle in Edge.</p></div></li>
+          <li><span>4</span><div><b>Choose “Load unpacked”</b><p>Pick the folder you downloaded.</p></div></li>
+          <li><span>5</span><div><b>Browse</b><p>Head to a subreddit and the wall takes over.</p></div></li>
+        </ol>
+      </div>
+
+      <div class="tabpanel" data-panel="other" role="tabpanel">
+        <ol class="steps">
+          <li><span>1</span><div><b>Any Chromium fork works</b><p>Brave, Vivaldi, Opera, Arc — same extension API.</p></div></li>
+          <li><span>2</span><div><b>Find the extensions route</b><p>Usually the same internal URL as Chrome.</p>
+            <button class="copy" data-copy="chrome://extensions"><code>chrome://extensions</code><i>copy</i></button></li>
+          <li><span>3</span><div><b>Turn on Developer Mode</b><p>Label and position vary slightly by browser.</p></div></li>
+          <li><span>4</span><div><b>Load unpacked → pick the folder</b><p>Restart the tab if the launcher doesn't appear.</p></div></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 10 · PRICING ══════════════ -->
+<section class="sect sect--tight" id="pricing">
+  <div class="wrap">
+    <div class="sect__head sect__head--split reveal">
+      <div>
+        <p class="eyebrow"><span class="tag tag--teal">10</span> Pricing</p>
+        <h2 class="h2">Free now. Optional later.</h2>
+      </div>
+      <p class="sect__note">Every feature that exists today costs nothing. Premium is a plan,
+      not a paywall — and the free version isn't going anywhere.</p>
+    </div>
+
+    <div class="price">
+      <article class="price__now reveal">
+        <span class="ribbon">Current build</span>
+        <div class="price__fig"><span class="price__cur">$</span>0<span class="price__per">/ forever, right now</span></div>
+        <h3 class="h4">Everything that ships today</h3>
+        <ul class="price__list">
+          <li>Unlimited masonry browsing</li>
+          <li>Images, galleries, GIFs, video</li>
+          <li>Full media viewer + slideshow</li>
+          <li>Every layout and playback setting</li>
+          <li>All keyboard shortcuts</li>
+          <li>Local storage, no account</li>
+        </ul>
+        <a class="btn btn--solid price__cta" href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">Get it free</a>
+      </article>
+
+      <article class="price__plan reveal d2">
+        <span class="pill pill--line">Planned · not released</span>
+        <h3 class="h4">Optional premium subscriptions</h3>
+        <p>Future releases may add paid tiers for people who want to support development.
+        Tiers, features and pricing are all subject to change.</p>
+        <ol class="road">
+          <li><span>Expected</span><b>Unlimited media viewing</b></li>
+          <li><span>Expected</span><b>Premium viewer enhancements</b></li>
+          <li><span>Expected</span><b>Advanced customization</b></li>
+          <li><span>Expected</span><b>Additional gallery layouts</b></li>
+          <li><span>Expected</span><b>Early access to new features</b></li>
+          <li><span>Expected</span><b>Priority support</b></li>
+        </ol>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 11 · FAQ ══════════════ -->
+<section class="sect" id="faq">
+  <div class="wrap faq__grid">
+    <div class="faq__side">
+      <p class="eyebrow reveal"><span class="tag tag--paper">11</span> FAQ</p>
+      <h2 class="h2 reveal d1">The questions<br />that matter.</h2>
+      <p class="sect__note reveal d2">Still stuck? Questions, bug reports and feature suggestions are
+      always welcome — support channels arrive with future releases.</p>
+      <a class="btn btn--line btn--sm reveal d3" href="https://github.com/mrjohndowe/Mossaic_Extension/issues" target="_blank" rel="noopener noreferrer">Open an issue</a>
+    </div>
+
+    <div class="faq__list reveal d1" id="faqList">
+      <details class="q" open>
+        <summary>Does Mosaic collect my data?<i></i></summary>
+        <div class="q__body"><p>No. The extension operates locally inside your browser. There is no
+        analytics pipeline, no telemetry, and no server belonging to Mosaic that your browsing ever touches.</p></div>
+      </details>
+      <details class="q">
+        <summary>Does it require a Reddit account?<i></i></summary>
+        <div class="q__body"><p>No. Public Reddit content can be viewed without signing in — subject to
+        Reddit's own availability and access policies, which Mosaic doesn't change.</p></div>
+      </details>
+      <details class="q">
+        <summary>Is Mosaic free?<i></i></summary>
+        <div class="q__body"><p>Yes, currently free during development. Future versions may introduce
+        optional subscription plans for premium features.</p></div>
+      </details>
+      <details class="q">
+        <summary>Will the free version disappear?<i></i></summary>
+        <div class="q__body"><p>No. The intention is to keep a free version while expanding premium
+        functionality through optional subscriptions.</p></div>
+      </details>
+      <details class="q">
+        <summary>Is my data stored online?<i></i></summary>
+        <div class="q__body"><p>No. All settings remain stored locally using your browser's own storage,
+        which is why your preferences follow the browser profile rather than an account.</p></div>
+      </details>
+      <details class="q">
+        <summary>Is this open source?<i></i></summary>
+        <div class="q__body"><p>No. Mosaic for Reddit is proprietary software and the exclusive intellectual
+        property of John Dowe. The source, design, assets and documentation are not open source, and no
+        permission is granted to copy, modify, redistribute, reverse engineer, decompile, create derivative
+        works from, or commercially exploit any portion of it except as expressly permitted by the
+        accompanying license agreement. See <code>LICENSE.txt</code> in the repository.</p></div>
+      </details>
+      <details class="q">
+        <summary>NSFW content?<i></i></summary>
+        <div class="q__body"><p>Visibility is filterable in Settings and remains subject to Reddit's own
+        settings for the account or session you're browsing with.</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 12 · CTA ══════════════ -->
+<section class="cta">
+  <div class="cta__glow" aria-hidden="true"></div>
+  <div class="wrap cta__in">
+    <p class="eyebrow reveal">© 2026 John Dowe · Independent software developer</p>
+    <h2 class="cta__title reveal d1">Stop clicking<br />into posts.</h2>
+    <p class="cta__sub reveal d2">Load the folder, open a subreddit, and let the wall run.</p>
+    <div class="cta__btns reveal d3">
+      <a class="btn btn--solid btn--lg" href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">
+        github.com/mrjohndowe/Mossaic_Extension
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M2 8h11M9 4l4 4-4 4"/></svg>
+      </a>
+      <a class="btn btn--line btn--lg" href="#install">Read the install steps</a>
+    </div>
+    <p class="cta__fine reveal d4">Thank you for using Mosaic for Reddit. Your support, feedback and
+    feature suggestions shape the project as it grows.</p>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer class="footer">
+  <div class="wrap footer__grid">
+    <div class="footer__brand">
+      <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect x="1"  y="1"  width="13" height="17" rx="2.5" fill="#FF4A1C"/>
+        <rect x="17" y="1"  width="14" height="9"  rx="2.5" fill="#FFB020"/>
+        <rect x="17" y="13" width="14" height="18" rx="2.5" fill="#35C4B5"/>
+        <rect x="1"  y="21" width="13" height="10" rx="2.5" fill="#F4F1EA" opacity=".85"/>
+      </svg>
+      <p><b>Mosaic for Reddit</b> — a fast, unlimited media wall for images, galleries, GIFs and video.</p>
+      <p class="mono footer__cr">© 2026 John Dowe. All Rights Reserved.</p>
+    </div>
+
+    <nav class="footer__col" aria-label="Product">
+      <p class="mono footer__lbl">Product</p>
+      <a href="#wall">The wall</a><a href="#media">Media types</a><a href="#viewer">Viewer</a>
+      <a href="#tune">Customization</a><a href="#keys">Shortcuts</a>
+    </nav>
+    <nav class="footer__col" aria-label="Details">
+      <p class="mono footer__lbl">Details</p>
+      <a href="#privacy">Privacy</a><a href="#install">Installation</a><a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a><a href="#where">Coverage</a>
+    </nav>
+    <nav class="footer__col" aria-label="Repository">
+      <p class="mono footer__lbl">Repository</p>
+      <a href="https://github.com/mrjohndowe/Mossaic_Extension" target="_blank" rel="noopener noreferrer">Source &amp; README</a>
+      <a href="https://github.com/mrjohndowe/Mossaic_Extension/blob/main/LICENSE.txt" target="_blank" rel="noopener noreferrer">LICENSE.txt</a>
+      <a href="https://github.com/mrjohndowe/Mossaic_Extension/issues" target="_blank" rel="noopener noreferrer">Report a bug</a>
+      <a href="#top">Back to top ↑</a>
+    </nav>
+  </div>
+
+  <div class="wrap footer__legal">
+    <p>Proprietary software. Not open source. No permission is granted to copy, modify, redistribute,
+    reverse engineer, decompile, create derivative works from, or commercially exploit any portion of the
+    software except as expressly permitted by the accompanying license agreement.</p>
+    <p>Reddit® is a registered trademark of Reddit, Inc. Mosaic for Reddit is an independent browser
+    extension and is not affiliated with, endorsed by, sponsored by, or approved by Reddit, Inc.
+    All trademarks belong to their respective owners. Demo imagery on this page is stock photography
+    used to illustrate the layout.</p>
+  </div>
+</footer>
+
+<button class="totop" id="toTop" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 19V5M6 11l6-6 6 6"/></svg>
+</button>
+
+<!-- ══════════════ LIGHTBOX ══════════════ -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Media viewer" hidden>
+  <div class="lb__top">
+    <span class="lb__crumb"><b id="lbSub">r/EarthPorn</b> · <span id="lbAuthor">u/wanderer</span></span>
+    <span class="lb__count mono" id="lbCount">1 / 20</span>
+    <div class="lb__acts">
+      <button class="vtool" id="lbZoomOut" aria-label="Zoom out">−</button>
+      <button class="vtool" id="lbZoomIn" aria-label="Zoom in">+</button>
+      <button class="vtool" id="lbFit" aria-label="Fit to screen">⤢</button>
+      <button class="vtool" id="lbSlide" aria-label="Toggle slideshow">▶</button>
+      <button class="vtool" id="lbFull" aria-label="Fullscreen">⛶</button>
+      <button class="lb__close" id="lbClose" aria-label="Close viewer">✕</button>
+    </div>
+  </div>
+
+  <button class="lb__nav lb__nav--prev" id="lbPrev" aria-label="Previous media">
+    <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="m14 6-6 6 6 6"/></svg>
+  </button>
+
+  <div class="lb__stage" id="lbStage">
+    <img id="lbImg" alt="" />
+    <span class="lb__hint" id="lbHint">← → to browse · Esc to close · Space for slideshow</span>
+  </div>
+
+  <button class="lb__nav lb__nav--next" id="lbNext" aria-label="Next media">
+    <svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="m10 6 6 6-6 6"/></svg>
+  </button>
+
+  <div class="lb__bot">
+    <h3 id="lbTitle">Misty ridge at first light</h3>
+    <p class="mono" id="lbMeta">IMAGE · 3024 × 4032 · i.redd.it · ▲ 12.4k · 💬 428</p>
+    <div class="lb__bar"><i id="lbBar"></i></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="/src/js/main.js"></script>
+</body>
+</html>
