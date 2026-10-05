@@ -15,7 +15,8 @@ chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
 });
 chrome.tabs.onActivated.addListener(({ tabId }) => {
   chrome.tabs.get(tabId, (tab) => {
-    if (!chrome.runtime.lastError && tab) updateBadge(tabId, tab.url);
+    if (chrome.runtime.lastError) return;
+    if (tab) updateBadge(tabId, tab.url);
   });
 });
 

@@ -128,6 +128,7 @@
       permalink: "https://www.reddit.com" + p.permalink,
       nsfw: p.over_18,
       score: p.score || 0,
+      crosspost_parent: p.crosspost_parent || null,
     };
     const thumb = unesc(
       p.preview?.images?.[0]?.resolutions?.slice(-2)[0]?.url || p.preview?.images?.[0]?.source?.url
@@ -525,7 +526,12 @@
     }
   }
 
-  const mediaKey = (i) => String(i.full || i.video || i.slides?.[0]?.src || i.embed || "").split("?")[0];
+  const mediaKey = (i) => {
+    // For crossposts, use the original post ID as the key
+    if (i.crosspost_parent) return i.crosspost_parent;
+    // Otherwise use the media URL
+    return String(i.full || i.video || i.slides?.[0]?.src || i.embed || "").split("?")[0];
+  };
 
   // Content filters from Settings. Not applied to the Favorites view, so favorites never vanish.
   function passes(i) {
@@ -553,7 +559,7 @@
         if (!passes(i)) return false;
         if (settings.dedupe) {
           const k = mediaKey(i);
-          if (k) {
+          if (k && k !== "") {
             if (keys.has(k)) return false;
             keys.add(k);
           }

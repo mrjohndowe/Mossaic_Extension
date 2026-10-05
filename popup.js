@@ -151,7 +151,12 @@
       // No content script in this tab (it was open before Mosaic was installed or updated).
       // Reload it on the chosen source; the wall opens once the page has loaded.
       await store.set("mz_pending", { source: src.label, settings: !!opts.settings, ts: Date.now() });
-      await chrome.tabs.update(tab.id, { url: urlFor(src) });
+      try {
+        await chrome.tabs.update(tab.id, { url: urlFor(src) });
+      } catch (e) {
+        // Tab may have been closed, create a new one instead
+        await chrome.tabs.create({ url: urlFor(src) });
+      }
       return window.close();
     }
     await store.set("mz_pending", { source: src.label, settings: !!opts.settings, ts: Date.now() });
@@ -197,8 +202,12 @@
 
   async function init() {
     $("#ver").textContent = "v" + chrome.runtime.getManifest().version;
-    const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
-    tab = t || null;
+    try {
+      const [t] = await chrome.tabs.query({ active: true, currentWindow: true });
+      tab = t || null;
+    } catch (e) {
+      tab = null;
+    }
     onReddit = /^https:\/\/(?:www|old)\.reddit\.com\//i.test(tab?.url || "");
     if (onReddit) {
       try {
