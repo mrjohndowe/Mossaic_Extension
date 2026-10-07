@@ -89,6 +89,14 @@ Mosaic supports nearly every major Reddit media type.
 
 ---
 
+## ⭐ Follow Users
+
+- Follow a post author from the media card or viewer.
+- Followed users are added to the Watchlist and can be opened from there.
+- Posts from followed users are marked in the wall, with a subtle alert when new ones load.
+
+---
+
 ## 🎬 Powerful Media Viewer
 
 Open any media item into a distraction-free viewer.

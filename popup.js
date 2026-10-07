@@ -217,8 +217,10 @@
       }
     }
     prefs = { ...DEFAULT_PREFS, ...(await store.get("mz_prefs", {})) };
-    const w = await store.get("mz_watchlist", DEFAULT_WATCH);
-    watch = (Array.isArray(w) && w.length ? w : DEFAULT_WATCH).map((n) => (String(n).includes("/") ? n : `r/${n}`));
+    const savedWatchlist = await store.get("mz_watchlist", null);
+    watch = (Array.isArray(savedWatchlist) ? savedWatchlist : DEFAULT_WATCH)
+      .filter((n) => typeof n === "string" && n.trim() && n !== "r/")
+      .map((n) => (n.includes("/") ? n : `r/${n}`));
     applyTheme(await store.get("mz_settings", {}));
 
     const favs = Object.keys(await store.get("mz_favs", {})).length;
