@@ -31,6 +31,7 @@
     get: (k, d) => new Promise((r) => chrome.storage.local.get(k, (v) => r(v[k] ?? d))),
     set: (k, v) => chrome.storage.local.set({ [k]: v }),
   };
+  const DEFAULT_WATCH = ["u/former-wolverine84/m/nothing_but_goths"];
 
   const state = {
     open: false,
@@ -49,7 +50,8 @@
     hidden: new Set(),
     seen: new Set(),
     favs: {},
-    watchlist: [""],
+    watchlist: [],
+    notifiedFollowedAuthors: new Set(),
     showHidden: false,
     favView: false,
     index: -1,
@@ -114,6 +116,55 @@
   // Label of the source for the page we're on (null if this page isn't a supported listing)
   function currentSubredditFromUrl() {
     return parseSource(location.pathname, false)?.label || null;
+  }
+
+  function userSource(author) {
+    return /^[A-Za-z0-9_-]{3,20}$/.test(String(author || "")) ? `u/${author}` : null;
+  }
+
+  function isUserFollowed(author) {
+    const source = userSource(author);
+    return !!source && state.watchlist.some((item) => item.toLowerCase() === source.toLowerCase());
+  }
+
+  function toggleUserFollow(author) {
+    const source = userSource(author);
+    if (!source) return;
+    const index = state.watchlist.findIndex((item) => item.toLowerCase() === source.toLowerCase());
+    if (index >= 0) {
+      state.watchlist.splice(index, 1);
+      toast(`Removed ${source} from your watchlist`);
+    } else {
+      state.watchlist.push(source);
+      toast(`Added ${source} to your watchlist`);
+    }
+    store.set("mz_watchlist", state.watchlist);
+    syncWatchlistUI();
+    syncUserFollowUI();
+  }
+
+  let followedAlertTimer = null;
+  const pendingFollowedAuthors = new Set();
+  function alertFollowedAuthors(items) {
+    for (const item of items) {
+      if (isUserFollowed(item.author) && !state.notifiedFollowedAuthors.has(item.author.toLowerCase())) {
+        state.notifiedFollowedAuthors.add(item.author.toLowerCase());
+        pendingFollowedAuthors.add(item.author);
+      }
+    }
+    if (!pendingFollowedAuthors.size || followedAlertTimer) return;
+    followedAlertTimer = setTimeout(() => {
+      const authors = [...pendingFollowedAuthors];
+      pendingFollowedAuthors.clear();
+      followedAlertTimer = null;
+      const message =
+        authors.length === 1
+          ? `New post from followed user u/${authors[0]}`
+          : authors.length <= 3
+          ? `New posts from followed users: ${authors.map((author) => `u/${author}`).join(", ")}`
+          : `New posts from ${authors.length} followed users`;
+      toast(message, true);
+    }, 500);
   }
 
   // ---------- Parsing Reddit subreddit posts into media items ----------
@@ -269,6 +320,7 @@
           fresh.push(parsed);
         }
       }
+      alertFollowedAuthors(fresh);
       state.items.push(...fresh);
       render(true);
       setStatus(state.done ? `End of ${state.subreddit} feed (${state.items.length} media posts loaded)` : "");
@@ -333,6 +385,7 @@
           <label>Zoom <input class="mz-zoom" type="range" min="1" max="5" step="0.1" value="1"></label>
           <button class="mz-btn mz-play">▶ Slideshow</button>
           <button class="mz-btn mz-fav">♡ Favorite</button>
+          <button class="mz-btn mz-user-watch" aria-pressed="false">☆ Follow user</button>
           <button class="mz-btn mz-dl">⬇ Download</button>
           <button class="mz-btn mz-hide">Hide</button>
           <button class="mz-btn mz-full">⛶</button>
@@ -466,6 +519,10 @@
     q(".mz-vclose").onclick = closeViewer;
     q(".mz-play").onclick = toggleSlideshow;
     q(".mz-fav").onclick = () => toggleFav(visible()[state.index]);
+    q(".mz-user-watch").onclick = () => {
+      const item = visible()[state.index];
+      if (item) toggleUserFollow(item.author);
+    };
     q(".mz-dl").onclick = () => downloadCurrent();
     q(".mz-hide").onclick = () => {
       const it = visible()[state.index];
@@ -647,9 +704,11 @@
         "mz-card" +
           (state.hidden.has(it.id) ? " is-hidden" : "") +
           (settings.dimSeen && state.seen.has(it.id) ? " mz-seen" : "") +
-          (settings.nsfw === "blur" && it.nsfw ? " mz-blur" : "")
+          (settings.nsfw === "blur" && it.nsfw ? " mz-blur" : "") +
+          (isUserFollowed(it.author) ? " mz-followed" : "")
       );
       card.dataset.id = it.id;
+      card.dataset.author = it.author || "";
       const ratio = cardRatio(it);
       card.style.aspectRatio = `1 / ${ratio}`;
       const badge =
@@ -661,8 +720,17 @@
       card.innerHTML = `${
         it.thumb ? `<img loading="lazy" src="${esc(it.thumb)}" alt="">` : `<div class="mz-ph">${esc(it.title)}</div>`
       }${badge}
-        <figcaption><b>${esc(it.title)}</b><span>${esc(it.sub)}</span></figcaption>
-        <div class="mz-cardtools"><button data-a="fav">${state.favs[it.id] ? "♥" : "♡"}</button><button data-a="hide">${
+        <figcaption><b>${esc(it.title)}</b><span>${esc(it.sub)}</span><span>u/${esc(it.author)}</span></figcaption>
+        ${isUserFollowed(it.author) ? `<span class="mz-followed-badge">★ Following</span>` : ""}
+        <div class="mz-cardtools"><button data-a="fav" title="Favorite post">${state.favs[it.id] ? "♥" : "♡"}</button>${
+          userSource(it.author)
+            ? `<button data-a="user-fav" aria-label="${
+                isUserFollowed(it.author) ? `Unfollow u/${esc(it.author)}` : `Follow u/${esc(it.author)}`
+              }" aria-pressed="${isUserFollowed(it.author)}" title="${
+                isUserFollowed(it.author) ? "Remove user from watchlist" : "Add user to watchlist"
+              }">${isUserFollowed(it.author) ? "★" : "☆"}</button>`
+            : ""
+        }<button data-a="hide">${
         state.hidden.has(it.id) ? "↺" : "✕"
       }</button></div>`;
       card.onclick = (e) => {
@@ -671,6 +739,11 @@
           e.stopPropagation();
           toggleFav(it);
           e.target.textContent = state.favs[it.id] ? "♥" : "♡";
+          return;
+        }
+        if (a === "user-fav") {
+          e.stopPropagation();
+          toggleUserFollow(it.author);
           return;
         }
         if (a === "hide") {
@@ -701,6 +774,38 @@
     ui.root.querySelector(".mz-favs span").textContent = Object.keys(state.favs).length;
     if (state.index >= 0)
       ui.root.querySelector(".mz-fav").textContent = state.favs[it.id] ? "♥ Favorited" : "♡ Favorite";
+  }
+
+  function syncUserFollowUI() {
+    ui.grid?.querySelectorAll(".mz-card").forEach((card) => {
+      const author = card.dataset.author;
+      const button = card.querySelector('[data-a="user-fav"]');
+      const followed = isUserFollowed(author);
+      card.classList.toggle("mz-followed", followed);
+      if (button) {
+        button.textContent = followed ? "★" : "☆";
+        button.title = followed ? "Remove user from watchlist" : "Add user to watchlist";
+        button.setAttribute("aria-label", `${followed ? "Unfollow" : "Follow"} u/${author}`);
+        button.setAttribute("aria-pressed", String(followed));
+      }
+      let badge = card.querySelector(".mz-followed-badge");
+      if (followed && !badge) {
+        badge = el("span", "mz-followed-badge", "★ Following");
+        card.appendChild(badge);
+      } else if (!followed) {
+        badge?.remove();
+      }
+    });
+    const item = visible()[state.index];
+    const viewerButton = ui.root?.querySelector(".mz-user-watch");
+    if (viewerButton && item) {
+      const followed = isUserFollowed(item.author);
+      viewerButton.hidden = !userSource(item.author);
+      viewerButton.textContent = followed ? "★ Following" : "☆ Follow user";
+      viewerButton.setAttribute("aria-label", `${followed ? "Unfollow" : "Follow"} u/${item.author}`);
+      viewerButton.setAttribute("aria-pressed", String(followed));
+      viewerButton.title = followed ? "Remove user from watchlist" : `Add u/${item.author} to watchlist`;
+    }
   }
 
   // ---------- Viewer ----------
@@ -737,6 +842,7 @@
     } · ${i + 1}/${list.length} (∞)</span>`;
     ui.root.querySelector(".mz-fav").textContent = state.favs[it.id] ? "♥ Favorited" : "♡ Favorite";
     ui.root.querySelector(".mz-hide").textContent = state.hidden.has(it.id) ? "Unhide" : "Hide";
+    syncUserFollowUI();
     // Unlimited pre-fetching as user approaches the end of currently loaded items
     if (i > list.length - 10) loadMore();
     list.slice(i + 1, i + 1 + settings.preload).forEach((n) => {
@@ -1355,8 +1461,8 @@
     if (ui.emptyMsg) ui.emptyMsg.style.display = any ? "none" : "block";
   }
 
-  function toast(msg) {
-    const t = el("div", "mz-toast", esc(msg));
+  function toast(msg, subtle = false) {
+    const t = el("div", subtle ? "mz-toast mz-toast-followed" : "mz-toast", esc(msg));
     ui.root.appendChild(t);
     setTimeout(() => t.remove(), 2700);
   }
@@ -1547,6 +1653,7 @@
   function reload() {
     state.items = [];
     state.seenIds = new Set();
+    state.notifiedFollowedAuthors.clear();
     state.after = null;
     state.pagesLoaded = 0;
     state.done = false;
@@ -1692,7 +1799,10 @@
     state.seen = new Set(await store.get("mz_seen", []));
     state.hidden = new Set(await store.get("mz_hidden", []));
     state.favs = await store.get("mz_favs", {});
-    state.watchlist = (await store.get("mz_watchlist", state.watchlist)).map((n) => (n.includes("/") ? n : `r/${n}`));
+    const savedWatchlist = await store.get("mz_watchlist", null);
+    state.watchlist = (Array.isArray(savedWatchlist) ? savedWatchlist : DEFAULT_WATCH)
+      .filter((n) => typeof n === "string" && n.trim() && n !== "r/")
+      .map((n) => (n.includes("/") ? n : `r/${n}`));
     buildUI();
     compileLists();
     applyLook();
