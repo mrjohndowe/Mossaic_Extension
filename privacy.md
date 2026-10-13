@@ -68,8 +68,11 @@ Examples may include:
 - Viewer preferences
 - Launcher preferences
 - Other Extension configuration
+- Age confirmation, sex selection, and optional country or region entered during onboarding
+- The preference for showing same-anatomy media
 
 These settings are stored using browser storage provided to the Extension.
+Onboarding profile values remain in local extension storage and are not sent to Mosaic servers. Location is optional; users should enter only a broad region.
 
 ## 5. Data Transmission
 

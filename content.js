@@ -84,6 +84,7 @@
   const settings = { ...DEFAULTS };
   let blockedWords = [];
   let blockedAuthors = [];
+  let profileAdult = false;
 
   const THEMES = {
     crimson: ["Crimson", "#ff1f5a", "#9b1dff"],
@@ -1663,6 +1664,10 @@
   }
 
   function openWall(forcedSub) {
+    if (!profileAdult) {
+      alert("Complete Mosaic onboarding and confirm that you are 18 or older before opening the media wall.");
+      return;
+    }
     const sub = forcedSub || currentSubredditFromUrl() || state.subreddit;
     if (!sub) {
       alert("Open a subreddit, a custom feed (reddit.com/user/name/m/feed) or a user page first.");
@@ -1790,9 +1795,14 @@
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.mz_prefs) onPrefsChanged(changes.mz_prefs.newValue);
+    if (area === "local" && changes.mz_profile) {
+      profileAdult = Number.isInteger(changes.mz_profile.newValue?.age) && changes.mz_profile.newValue.age >= 18;
+    }
   });
 
   (async () => {
+    const profile = await store.get("mz_profile", null);
+    profileAdult = Number.isInteger(profile?.age) && profile.age >= 18;
     const prefs = await store.get("mz_prefs", {});
     Object.assign(state, prefs);
     Object.assign(settings, sanitizeSettings(await store.get("mz_settings", {})));
