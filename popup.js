@@ -7,6 +7,7 @@
 
   const DEFAULT_WATCH = ["u/former-wolverine84/m/nothing_but_goths"];
   const DEFAULT_PREFS = { filter: "all", sort: "hot", time: "day", cols: 4, turbo: false };
+  const PROFILE_KEY = "mz_profile";
   const THEMES = {
     crimson: ["#ff1f5a", "#9b1dff"], gx: ["#fa1e4e", "#ff6a00"], violet: ["#8b5cf6", "#ec4899"], ocean: ["#22d3ee", "#3b82f6"],
     emerald: ["#10b981", "#06b6d4"], sunset: ["#f97316", "#ec4899"], gold: ["#fbbf24", "#f97316"],
@@ -39,6 +40,23 @@
   let current = null; // source for the page in the active tab, if supported
   let prefs = { ...DEFAULT_PREFS };
   let watch = DEFAULT_WATCH.slice();
+  let profile = null;
+
+  function showOnboarding(show) {
+    $("#onboarding").hidden = !show;
+    document.querySelectorAll("body > .card:not(.onboarding), body > .foot, body > .hint").forEach((node) => {
+      node.hidden = show;
+    });
+  }
+
+  function updateAnatomyQuestion() {
+    const sex = $("#profileSex").value;
+    const pref = $("#anatomyPref");
+    pref.hidden = sex !== "male" && sex !== "female";
+    $("#anatomyLabel").textContent = sex === "male"
+      ? "Show media with visible male anatomy"
+      : "Show media with visible female anatomy";
+  }
 
   function applyTheme(settings) {
     let a = "#ff1f5a";
@@ -165,6 +183,31 @@
   }
 
   function bind() {
+    $("#profileSex").onchange = updateAnatomyQuestion;
+    $("#onboardingForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const age = Number($("#profileAge").value);
+      const err = $("#onboardingErr");
+      if (!Number.isInteger(age) || age < 1 || age > 120) {
+        err.hidden = false;
+        err.textContent = "Enter a valid age.";
+        return;
+      }
+      if (age < 18) {
+        err.hidden = false;
+        err.textContent = "Mosaic media browsing is available only to adults 18 and older.";
+        return;
+      }
+      profile = {
+        age,
+        sex: $("#profileSex").value,
+        location: $("#profileLocation").value.trim(),
+        showSameAnatomy: $("#showAnatomy").checked,
+        savedAt: Date.now(),
+      };
+      await store.set(PROFILE_KEY, profile);
+      showOnboarding(false);
+    };
     $("#openBtn").onclick = () => openWall();
     $("#settingsBtn").onclick = () => openWall(undefined, { settings: true });
     $("#srcForm").onsubmit = (e) => {
@@ -217,6 +260,15 @@
       }
     }
     prefs = { ...DEFAULT_PREFS, ...(await store.get("mz_prefs", {})) };
+    profile = await store.get(PROFILE_KEY, null);
+    if (!profile || profile.age < 18) {
+      if (profile?.age < 18) {
+        $("#profileAge").value = profile.age;
+        $("#onboardingErr").hidden = false;
+        $("#onboardingErr").textContent = "Mosaic media browsing is available only to adults 18 and older.";
+      }
+      showOnboarding(true);
+    }
     const savedWatchlist = await store.get("mz_watchlist", null);
     watch = (Array.isArray(savedWatchlist) ? savedWatchlist : DEFAULT_WATCH)
       .filter((n) => typeof n === "string" && n.trim() && n !== "r/")
@@ -231,6 +283,12 @@
     renderChips();
     renderPrefs();
     bind();
+    if (profile?.sex) {
+      $("#profileSex").value = profile.sex;
+      $("#profileLocation").value = profile.location || "";
+      $("#showAnatomy").checked = profile.showSameAnatomy !== false;
+      updateAnatomyQuestion();
+    }
     if (!current) $("#srcInput").focus();
   }
 

@@ -21,6 +21,16 @@ All notable changes to **Mosaic for Reddit: Media Wall** are documented here.
 - Updated GitHub Actions dependencies to version 5.
 - Added automated dependency update support through Dependabot.
 
+## [2.4.8] - 2026-10-13
+
+### Added
+- Added first-run onboarding for age confirmation, sex, optional broad location, and an anatomy display preference.
+- Added an 18+ gate before opening the media wall.
+
+### Changed
+- Onboarding profile details are stored locally in the browser.
+- Clarified that anatomy-based media filtering is not available until a local detector is integrated.
+
 ---
 
 ## [2.4.6] - 2026-10-05
