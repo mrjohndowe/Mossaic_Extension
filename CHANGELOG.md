@@ -21,6 +21,12 @@ All notable changes to **Mosaic for Reddit: Media Wall** are documented here.
 - Updated GitHub Actions dependencies to version 5.
 - Added automated dependency update support through Dependabot.
 
+## [2.4.9] - 2026-10-13
+
+### Changed
+- Enabled duplicate media hiding by default for existing and new installs.
+- Expanded duplicate matching to cover gallery slides, thumbnails, normalized media URLs, and Reddit crossposts.
+
 ## [2.4.8] - 2026-10-13
 
 ### Added

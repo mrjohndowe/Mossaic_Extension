@@ -69,7 +69,7 @@
     gap: 10, radius: 10, cardShape: "smart", captions: "hover", badges: true, hoverZoom: true, dimSeen: true,
     // content filters
     nsfw: "show", minScore: 0, minWidth: 0, showGalleries: true, showGifs: true, showEmbeds: true,
-    dedupe: false, blockedWords: "", blockedAuthors: "",
+    dedupe: true, blockedWords: "", blockedAuthors: "",
     // loading
     pageSize: 100, autoLoad: true, prefetch: 1400, useLogin: true,
     // viewer
@@ -584,11 +584,22 @@
     }
   }
 
-  const mediaKey = (i) => {
-    // For crossposts, use the original post ID as the key
-    if (i.crosspost_parent) return i.crosspost_parent;
-    // Otherwise use the media URL
-    return String(i.full || i.video || i.slides?.[0]?.src || i.embed || "").split("?")[0];
+  const mediaKeys = (i) => {
+    const keys = [];
+    if (i.crosspost_parent) keys.push(`post:${String(i.crosspost_parent).toLowerCase()}`);
+    const urls = [i.full, i.video, i.thumb, i.embed, ...(i.slides || []).map((slide) => slide.src)];
+    for (const value of urls) {
+      if (!value) continue;
+      try {
+        const url = new URL(value);
+        url.hash = "";
+        url.search = "";
+        keys.push(`url:${url.hostname.toLowerCase()}${url.pathname.replace(/\/$/, "")}`);
+      } catch {
+        keys.push(`url:${String(value).split(/[?#]/, 1)[0].toLowerCase()}`);
+      }
+    }
+    return [...new Set(keys.filter((key) => key !== "url:"))];
   };
 
   // Content filters from Settings. Not applied to the Favorites view, so favorites never vanish.
@@ -616,11 +627,9 @@
       if (!state.favView) {
         if (!passes(i)) return false;
         if (settings.dedupe) {
-          const k = mediaKey(i);
-          if (k && k !== "") {
-            if (keys.has(k)) return false;
-            keys.add(k);
-          }
+          const itemKeys = mediaKeys(i);
+          if (itemKeys.some((key) => keys.has(key))) return false;
+          itemKeys.forEach((key) => keys.add(key));
         }
       }
       return true;
@@ -1180,7 +1189,7 @@
         { k: "showGalleries", label: "Show galleries", type: "toggle", fx: "render" },
         { k: "showGifs", label: "Show GIFs", type: "toggle", fx: "render" },
         { k: "showEmbeds", label: "Show YouTube and Vimeo", type: "toggle", fx: "render" },
-        { k: "dedupe", label: "Hide duplicate media", desc: "Skips crossposts that point at the same image or video.", type: "toggle", fx: "render" },
+        { k: "dedupe", label: "Hide duplicate media", desc: "Hides repeated media URLs and crossposts, including overlaps between gallery slides.", type: "toggle", fx: "render" },
         {
           k: "blockedWords", label: "Blocked words", desc: "Hide posts whose title contains any of these. Separate with commas.",
           type: "textarea", placeholder: "spoiler, meme, ad", fx: "lists,render",
@@ -1805,7 +1814,13 @@
     profileAdult = Number.isInteger(profile?.age) && profile.age >= 18;
     const prefs = await store.get("mz_prefs", {});
     Object.assign(state, prefs);
-    Object.assign(settings, sanitizeSettings(await store.get("mz_settings", {})));
+    const storedSettings = await store.get("mz_settings", {});
+    Object.assign(settings, sanitizeSettings(storedSettings));
+    if (!(await store.get("mz_dedupe_default_v1", false))) {
+      settings.dedupe = true;
+      await store.set("mz_settings", settings);
+      await store.set("mz_dedupe_default_v1", true);
+    }
     state.seen = new Set(await store.get("mz_seen", []));
     state.hidden = new Set(await store.get("mz_hidden", []));
     state.favs = await store.get("mz_favs", {});
