@@ -289,9 +289,9 @@
     if (state.after) q.set("after", state.after);
     if (src.kind === "user") {
       q.set("sort", state.sort === "rising" ? "hot" : state.sort);
-      return `https://www.reddit.com${src.path}/submitted.json?${q}`;
+      return `${location.origin}${src.path}/submitted.json?${q}`;
     }
-    return `https://www.reddit.com${src.path}/${state.sort}.json?${q}`;
+    return `${location.origin}${src.path}/${state.sort}.json?${q}`;
   }
 
   // Unlimited session loader — chains pages automatically with no post cap
@@ -334,7 +334,9 @@
         return await loadMore(hops + 1);
       }
     } catch (e) {
-      setStatus(`Couldn't load ${state.subreddit}. Check that it exists and is public (private feeds need you to be logged in).`);
+      const reason = e instanceof Error ? e.message : String(e);
+      console.error(`Mosaic couldn't load ${state.subreddit}:`, e);
+      setStatus(`Couldn't load ${state.subreddit} (${reason}). Check that it exists, is accessible, and that "Use my Reddit login" is enabled if needed.`);
     } finally {
       state.loading = false;
       updateMore();
