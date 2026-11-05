@@ -3,7 +3,7 @@
   "name": "Mosaic for Reddit: Media Wall",
   "source": "https://github.com/mrjohndowe/Mossaic_Extension",
   "short_name": "Mosaic GX",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Turn any subreddit, custom feed or user page on Reddit into a fast, unlimited media wall of images, galleries, GIFs and video.",
   "permissions": ["storage", "downloads"],
   "host_permissions": [
@@ -39,7 +39,7 @@
       "js": ["content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
-    },
+    }
     
   ]
 }
