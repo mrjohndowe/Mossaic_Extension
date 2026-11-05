@@ -6,8 +6,20 @@ const SUPPORTED_RE = /^https:\/\/(?:www\.|old\.)?reddit\.com\/(?:r\/[^/]+|(?:u|u
 function updateBadge(tabId, url) {
   if (tabId == null) return;
   const on = SUPPORTED_RE.test(url || "");
-  chrome.action.setBadgeText({ tabId, text: on ? "ON" : "" });
-  if (on) chrome.action.setBadgeBackgroundColor({ tabId, color: "#ff1f5a" });
+  chrome.action.setBadgeText({ tabId, text: on ? "ON" : "" }, () => {
+    const error = chrome.runtime.lastError;
+    if (error && !error.message.startsWith("No tab with id:")) {
+      console.error("Could not update Mosaic badge:", error.message);
+    }
+  });
+  if (on) {
+    chrome.action.setBadgeBackgroundColor({ tabId, color: "#ff1f5a" }, () => {
+      const error = chrome.runtime.lastError;
+      if (error && !error.message.startsWith("No tab with id:")) {
+        console.error("Could not update Mosaic badge color:", error.message);
+      }
+    });
+  }
 }
 
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
@@ -19,6 +31,8 @@ chrome.tabs.onActivated.addListener(({ tabId }) => {
     if (tab) updateBadge(tabId, tab.url);
   });
 });
+
+
 
 // Content scripts cannot reliably force a cross-origin media URL to download:
 // browsers often ignore an anchor's download attribute and open the URL instead.

@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Mosaic for Reddit: Media Wall",
-  "source": "https://github.com/mrjohndowe/Mossaic_Extension",
+  "homepage_url": "https://github.com/mrjohndowe/Mossaic_Extension",
   "short_name": "Mosaic GX",
-  "version": "2.5.1",
+  "version": "2.5.2",
   "description": "Turn any subreddit, custom feed or user page on Reddit into a fast, unlimited media wall of images, galleries, GIFs and video.",
   "permissions": ["storage", "downloads"],
   "host_permissions": [
@@ -40,6 +40,6 @@
       "css": ["content.css"],
       "run_at": "document_idle"
     }
-    
+
   ]
 }
