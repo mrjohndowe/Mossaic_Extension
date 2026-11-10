@@ -17,6 +17,7 @@
   const MULTI_RE = /^\/(?:user|u)\/([A-Za-z0-9_-]{3,20})\/m\/([A-Za-z0-9_]{1,50})/i;
   const SUB_RE = /^\/r\/([A-Za-z0-9_+]{2,100})/i;
   const USER_RE = /^\/(?:user|u)\/([A-Za-z0-9_-]{3,20})(?:[/?#]|$)/i;
+  const WATCH_GROUPS = [["sub", "Subreddits"], ["user", "Users"], ["multi", "Custom feeds"]];
   function parseSource(input, allowBare) {
     let p = String(input || "").trim().replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
     if (!p) return null;
@@ -105,15 +106,28 @@
 
   function renderChips() {
     const box = $("#chips");
-    box.innerHTML = "";
-    for (const w of watch.slice(0, 8)) {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "chip";
-      b.textContent = w;
-      b.title = `Open ${w}`;
-      b.onclick = () => openWall(w);
-      box.appendChild(b);
+    box.replaceChildren();
+    const sources = watch.map((value) => ({ value, kind: parseSource(value, true)?.kind }));
+    for (const [kind, label] of WATCH_GROUPS) {
+      const entries = sources.filter((source) => source.kind === kind);
+      if (!entries.length) continue;
+      const group = document.createElement("section");
+      const heading = document.createElement("h3");
+      heading.className = "watchGroupTitle";
+      heading.textContent = label;
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      for (const { value } of entries) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.textContent = value;
+        b.title = `Open ${value}`;
+        b.onclick = () => openWall(value);
+        chips.append(b);
+      }
+      group.append(heading, chips);
+      box.append(group);
     }
   }
 

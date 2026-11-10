@@ -51,7 +51,7 @@ Mosaic does not intentionally collect or store:
 
 Mosaic operates on Reddit pages that you choose to visit.
 
-The Extension may read publicly available Reddit page content necessary to identify posts and display supported media in Mosaic's interface.
+The Extension may read Reddit listings to identify posts and display supported media. With “Use my Reddit login” enabled, Mosaic uses your browser's existing Reddit session for these requests, including for private feeds your account can access. Reddit determines which listings your account can view.
 
 Mosaic does not claim ownership of Reddit content, images, videos, GIFs, or other media displayed through the Extension. Such content remains subject to the rights and terms of its respective owners and platforms.
 

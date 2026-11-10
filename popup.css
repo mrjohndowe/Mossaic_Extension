@@ -77,7 +77,10 @@ button { cursor: pointer; }
 .go { height: 34px; padding: 0 14px; border: 0; border-radius: 8px; font-weight: 700; background: var(--accent); color: var(--on-accent); }
 .go:hover { filter: brightness(1.1); }
 .err { margin: 7px 0 0; font-size: 11px; color: #ff8a8a; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.watchGroups:not(:empty) { max-height: 172px; overflow-y: auto; margin-top: 9px; }
+.watchGroups section + section { margin-top: 9px; }
+.watchGroupTitle { margin: 0 0 4px; font-size: 11px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
   max-width: 100%; padding: 4px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
   background: var(--field); border: 1px solid var(--line); color: #cfcdd8;

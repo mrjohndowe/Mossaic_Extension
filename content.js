@@ -9,6 +9,7 @@
   const MULTI_RE = /^\/(?:user|u)\/([A-Za-z0-9_-]{3,20})\/m\/([A-Za-z0-9_]{1,50})/i;
   const SUB_RE = /^\/r\/([A-Za-z0-9_+]{2,100})/i;
   const USER_RE = /^\/(?:user|u)\/([A-Za-z0-9_-]{3,20})(?:[/?#]|$)/i;
+  const WATCH_GROUPS = [["sub", "Subreddits"], ["user", "Users"], ["multi", "Custom feeds"]];
 
   function parseSource(input, allowBare) {
     let p = String(input || "").trim().replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
@@ -281,42 +282,210 @@
     return null;
   }
 
-  function listingUrl() {
-    const src = parseSource(state.subreddit || currentSubredditFromUrl(), true);
-    if (!src) return null;
-    const q = new URLSearchParams({ limit: String(settings.pageSize), raw_json: "1" });
+  function listingUrl(src, json) {
+    const url = new URL(src.path + "/", location.origin);
+    const q = url.searchParams;
     if (state.sort === "top") q.set("t", state.time);
-    if (state.after) q.set("after", state.after);
     if (src.kind === "user") {
       q.set("sort", state.sort === "rising" ? "hot" : state.sort);
-      return `${location.origin}${src.path}/submitted.json?${q}`;
+      url.pathname += "submitted/";
+    } else if (json || state.sort !== "hot") {
+      url.pathname += state.sort + "/";
     }
-    return `${location.origin}${src.path}/${state.sort}.json?${q}`;
+    if (json) {
+      url.pathname = url.pathname.slice(0, -1) + ".json";
+      q.set("limit", String(settings.pageSize));
+      q.set("raw_json", "1");
+      if (state.after) q.set("after", state.after);
+    }
+    return url;
+  }
+
+  function webUrl(value, base = location.href) {
+    if (!value) return null;
+    try {
+      const url = new URL(value, base);
+      return /^https?:$/.test(url.protocol) ? url : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Reddit's listing page can still be available when its legacy JSON route is blocked.
+  function postFromListing(element) {
+    const attr = (name) => element.getAttribute(name);
+    const permalink = webUrl(attr("permalink") || attr("data-permalink"));
+    const id = attr("id") || attr("data-fullname");
+    const subreddit = attr("subreddit-prefixed-name")?.replace(/^r\//i, "") ||
+      attr("data-subreddit") || permalink?.pathname.match(/^\/r\/([^/]+)\//i)?.[1];
+    if (!/^t3_[a-z0-9]+$/i.test(id || "") || !permalink || !isRedditHost(permalink.hostname) || !subreddit) return null;
+
+    const img = element.querySelector(
+      'img[slot="post-media-img"], img.media-lightbox-img, img.preview-img, img.i18n-post-media-img, a.thumbnail img'
+    );
+    const image = listingImage(img);
+    const dest = webUrl(attr("content-href") || attr("data-url"));
+    const player = element.querySelector("shreddit-player, shreddit-player-2");
+    const video = listingVideo(player, element);
+    const poster = webUrl(player?.getAttribute("poster")) || image;
+    const gallery = [...element.querySelectorAll("gallery-carousel img")]
+      .map(listingImage)
+      .filter(Boolean);
+
+    const post = {
+      name: id,
+      subreddit,
+      permalink: permalink.pathname,
+      title: attr("post-title") || element.querySelector("a.title")?.textContent || "",
+      author: attr("author") || attr("data-author") || "[deleted]",
+      over_18: element.hasAttribute("nsfw") || element.classList.contains("over18"),
+      score: Number(attr("score") || attr("data-score")) || 0,
+      url: dest?.href || "",
+    };
+    if (poster) {
+      post.preview = { images: [{ source: { url: poster.href, width: img?.width, height: img?.height } }] };
+    }
+
+    if (gallery.length) {
+      post.is_gallery = true;
+      post.gallery_data = { items: gallery.map((_, index) => ({ media_id: index })) };
+      post.media_metadata = Object.fromEntries(gallery.map((slide, index) =>
+        [index, { status: "valid", s: { u: slide.href } }]
+      ));
+    } else if (video) {
+      post.is_video = true;
+      const separateAudio = video.hostname === "v.redd.it" && /\/DASH_[^/]+\.mp4$/i.test(video.pathname);
+      post.media = { reddit_video: { fallback_url: video.href, has_audio: separateAudio } };
+      return { ...parsePost(post), video: video.href, gif: player?.hasAttribute("gif") };
+    } else if (image && (attr("post-type") === "image" || image.hostname === "i.redd.it" ||
+      image.hostname === "preview.redd.it")) {
+      post.post_hint = "image";
+      post.url = dest?.hostname === "i.redd.it" ? dest.href : image.href;
+    }
+    return parsePost(post);
+  }
+
+  function isRedditHost(hostname) {
+    return /^(?:(?:www|old|new)\.)?reddit\.com$/i.test(hostname);
+  }
+
+  function listingImage(img) {
+    return webUrl(img?.getAttribute("src") || img?.getAttribute("data-lazy-src"));
+  }
+
+  function listingVideo(player, post) {
+    try {
+      const packaged = JSON.parse(player?.getAttribute("packaged-media-json") || "null");
+      const mp4s = packaged?.playbackMp4s?.permutations;
+      if (Array.isArray(mp4s)) {
+        const source = mp4s.map((entry) => entry?.source).filter((entry) => entry?.url)
+          .sort((a, b) => (b.dimensions?.height || 0) - (a.dimensions?.height || 0))[0];
+        const video = webUrl(source?.url);
+        if (video) return video;
+      }
+    } catch {
+      // Some cards omit usable packaged video metadata.
+    }
+    const source = player?.getAttribute("mp4-src") || player?.getAttribute("src") ||
+      post.querySelector('video[src], video source[type="video/mp4"]')?.getAttribute("src");
+    const video = webUrl(source);
+    return /\.mp4$/i.test(video?.pathname || "") ? video : null;
+  }
+
+  function readWebListing(doc, url, src) {
+    const entries = [...doc.querySelectorAll("shreddit-post[id^='t3_'], #siteTable .thing.link[data-fullname^='t3_']")]
+      .filter((post) => !post.matches("shreddit-post shreddit-post, shreddit-ad-post shreddit-post, [promoted]"));
+    const items = entries.map(postFromListing).filter((item) => item &&
+      (src.kind !== "sub" || src.path.includes("+") || item.sub.toLowerCase() === src.label.toLowerCase()));
+    const partial = doc.querySelector('faceplate-partial[slot="load-after"][src]') ||
+      doc.querySelector('faceplate-partial[src*="more-posts"][src*="after="], faceplate-partial[src*="/feeds/"][src*="after="]');
+    const nextLink = doc.querySelector(".next-button a[href]");
+    const next = webUrl(partial?.getAttribute("src") || nextLink?.getAttribute("href"), url);
+    const canContinue = next?.origin === location.origin && next.href !== url.href &&
+      (partial ? next.pathname.startsWith("/svc/shreddit/") :
+        parseSource(next.pathname, false)?.path.toLowerCase() === src.path.toLowerCase());
+    return { items, count: entries.length, next: canContinue ? next : null };
+  }
+
+  async function loadListing(src, options) {
+    const url = listingUrl(src, false);
+    if (!state.webPage) {
+      const response = await fetch(listingUrl(src, true), options).catch(() => {
+        options.signal.throwIfAborted();
+        return null;
+      });
+      if (response?.ok && !response.redirected && response.headers.get("content-type")?.includes("json")) {
+        const json = await response.json().catch(() => null);
+        if (Array.isArray(json?.data?.children)) {
+          return {
+            items: json.data.children.map((child) => parsePost(child?.data)).filter(Boolean),
+            count: json.data.children.length,
+            after: json.data.after,
+          };
+        }
+      }
+      if (response && (response.status === 429 || response.status >= 500)) {
+        throw new Error(`Reddit returned HTTP ${response.status}`);
+      }
+    }
+
+    const next = state.webPage;
+    const currentQuery = new URLSearchParams(location.search);
+    if (!next && !state.after && options.credentials === "include" &&
+      location.pathname.replace(/\/$/, "").toLowerCase() === url.pathname.replace(/\/$/, "").toLowerCase() &&
+      currentQuery.get("sort") === url.searchParams.get("sort") &&
+      currentQuery.get("t") === url.searchParams.get("t")) {
+      const page = readWebListing(document, url, src);
+      if (page.items.length) return { ...page, webPage: page.next };
+    }
+    // Resume using Reddit's HTML cursor when a later JSON page stops working.
+    if (!next && state.after) url.searchParams.set("after", state.after);
+    const requestUrl = next || url;
+    const response = await fetch(requestUrl, options);
+    const finalUrl = webUrl(response.url || requestUrl.href);
+    if (!response.ok || finalUrl?.origin !== location.origin) {
+      throw new Error(`Reddit returned HTTP ${response.status}`);
+    }
+    if (response.redirected && (next ? finalUrl.pathname !== next.pathname :
+      parseSource(finalUrl.pathname, false)?.path.toLowerCase() !== src.path.toLowerCase())) {
+      throw new Error("Reddit redirected away from the requested listing");
+    }
+    const template = document.createElement("template");
+    template.innerHTML = await response.text();
+    const page = readWebListing(template.content, finalUrl, src);
+    if (!page.count && !next) throw new Error("Reddit did not return a readable listing");
+    return { ...page, webPage: page.next };
   }
 
   // Unlimited session loader — chains pages automatically with no post cap
+  let listingRequest;
   async function loadMore(hops = 0) {
     if (state.loading || state.done || state.favView) return;
-    const url = listingUrl();
-    if (!url) {
+    const src = parseSource(state.subreddit || currentSubredditFromUrl(), true);
+    if (!src) {
       setStatus("Open a subreddit, custom feed (u/name/m/feed) or user page.");
       return;
     }
+    const request = new AbortController();
+    listingRequest = request;
     state.loading = true;
     setStatus(`Loading ${state.subreddit} (page ${state.pagesLoaded + 1}, ∞ unlimited session)…`);
     try {
-      const res = await fetch(url, { credentials: settings.useLogin ? "include" : "omit" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-      const posts = json.data?.children?.map((c) => c.data) || [];
-      state.after = json.data?.after || null;
+      const page = await loadListing(src, {
+        credentials: settings.useLogin ? "include" : "omit",
+        mode: "same-origin",
+        cache: "no-store",
+        signal: request.signal,
+      });
+      if (listingRequest !== request) return;
+      state.after = page.after || null;
+      state.webPage = page.webPage || null;
       state.pagesLoaded += 1;
-      if (!state.after || posts.length === 0) state.done = true;
+      if ((!state.after && !state.webPage) || page.count === 0) state.done = true;
 
       const fresh = [];
-      for (const p of posts) {
-        const parsed = parsePost(p);
-        if (parsed && !state.seenIds.has(parsed.id)) {
+      for (const parsed of page.items) {
+        if (!state.seenIds.has(parsed.id)) {
           state.seenIds.add(parsed.id);
           fresh.push(parsed);
         }
@@ -334,12 +503,17 @@
         return await loadMore(hops + 1);
       }
     } catch (e) {
+      if (listingRequest !== request) return;
       const reason = e instanceof Error ? e.message : String(e);
       console.error(`Mosaic couldn't load ${state.subreddit}:`, e);
-      setStatus(`Couldn't load ${state.subreddit} (${reason}). Check that it exists, is accessible, and that "Use my Reddit login" is enabled if needed.`);
+      setStatus(`Couldn't load ${state.subreddit} (${reason}). ${settings.useLogin
+        ? "Open the source on Reddit in this browser and check that your signed-in account can see its posts."
+        : 'Enable "Use my Reddit login" in Mosaic settings for private sources.'}`);
     } finally {
-      state.loading = false;
-      updateMore();
+      if (listingRequest === request) {
+        state.loading = false;
+        updateMore();
+      }
     }
   }
 
@@ -572,9 +746,16 @@
       state.subreddit && state.watchlist.some((s) => s.toLowerCase() === state.subreddit.toLowerCase());
     ui.watchToggle.textContent = inWatch ? "★ Followed" : "☆ Add to List";
     ui.watchToggle.classList.toggle("on", !!inWatch);
-    ui.watchSelect.innerHTML =
-      `<option value="">★ watchlist (${state.watchlist.length})</option>` +
-      state.watchlist.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    const sources = state.watchlist.map((value) => ({ value, kind: parseSource(value, true)?.kind }));
+    ui.watchSelect.replaceChildren(new Option(`★ Watchlist (${sources.length})`, ""));
+    for (const [kind, label] of WATCH_GROUPS) {
+      const group = el("optgroup");
+      group.label = label;
+      for (const source of sources.filter((source) => source.kind === kind)) {
+        group.append(new Option(source.value, source.value));
+      }
+      if (group.childElementCount) ui.watchSelect.append(group);
+    }
   }
 
   let wheelLock = 0;
@@ -1138,6 +1319,7 @@
       else if (f === "lists") compileLists();
       else if (f === "render") render();
       else if (f === "more") updateMore();
+      else if (f === "reload" && state.open && !state.favView) reload();
       else if (f === "ui") syncHeader();
       else if (f === "launcher") checkSubredditRoute(true);
       else if (f === "slideshow" && state.slideshow) {
@@ -1211,7 +1393,7 @@
         },
         { k: "autoLoad", label: "Load more as I scroll", desc: "Turn off to get a Load more button instead.", type: "toggle", fx: "more" },
         { k: "prefetch", label: "Start loading early", desc: "How far before the bottom the next page starts loading.", type: "range", min: 400, max: 4000, step: 100, unit: "px", fx: "" },
-        { k: "useLogin", label: "Use my Reddit login", desc: "Needed for private feeds and to see your own NSFW settings.", type: "toggle", fx: "" },
+        { k: "useLogin", label: "Use my Reddit login", desc: "Needed for private feeds and to see your own NSFW settings.", type: "toggle", fx: "reload" },
       ],
     },
     {
@@ -1663,10 +1845,14 @@
 
   // ---------- Open / close & route watcher ----------
   function reload() {
+    listingRequest?.abort();
+    listingRequest = null;
+    state.loading = false;
     state.items = [];
     state.seenIds = new Set();
     state.notifiedFollowedAuthors.clear();
     state.after = null;
+    state.webPage = null;
     state.pagesLoaded = 0;
     state.done = false;
     ui.grid.scrollTop = 0;
@@ -1685,11 +1871,11 @@
       return;
     }
     state.subreddit = sub;
+    state.favView = false;
     ui.subInput.value = sub;
     syncwatchlistUI();
     if (!state.open) {
       state.open = true;
-      state.favView = false;
       ui.root.classList.add("open");
       document.documentElement.classList.add("mz-lock");
     }
