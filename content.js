@@ -31,7 +31,7 @@
     get: (k, d) => new Promise((r) => chrome.storage.local.get(k, (v) => r(v[k] ?? d))),
     set: (k, v) => chrome.storage.local.set({ [k]: v }),
   };
-  const DEFAULT_LIST = ["u/former-wolverine84/m/nothing_but_goths"];
+  const DEFAULT_WATCH = ["u/former-wolverine84/m/nothing_but_goths"];
 
   const state = {
     open: false,
@@ -50,7 +50,7 @@
     hidden: new Set(),
     seen: new Set(),
     favs: {},
-    followersList: [],
+    watchlist: [],
     notifiedFollowedAuthors: new Set(),
     showHidden: false,
     favView: false,
@@ -125,22 +125,22 @@
 
   function isUserFollowed(author) {
     const source = userSource(author);
-    return !!source && state.followersList.some((item) => item.toLowerCase() === source.toLowerCase());
+    return !!source && state.watchlist.some((item) => item.toLowerCase() === source.toLowerCase());
   }
 
   function toggleUserFollow(author) {
     const source = userSource(author);
     if (!source) return;
-    const index = state.followersList.findIndex((item) => item.toLowerCase() === source.toLowerCase());
+    const index = state.watchlist.findIndex((item) => item.toLowerCase() === source.toLowerCase());
     if (index >= 0) {
-      state.followersList.splice(index, 1);
-      toast(`Removed ${source} from your followersList`);
+      state.watchlist.splice(index, 1);
+      toast(`Removed ${source} from your watchlist`);
     } else {
-      state.followersList.push(source);
-      toast(`Added ${source} to your followersList`);
+      state.watchlist.push(source);
+      toast(`Added ${source} to your watchlist`);
     }
-    store.set("mz_followersList", state.followersList);
-    syncfollowersListUI();
+    store.set("mz_watchlist", state.watchlist);
+    syncwatchlistUI();
     syncUserFollowUI();
   }
 
@@ -363,8 +363,8 @@
           <input class="mz-subinput" type="text" placeholder="r/name · u/name/m/feed · paste URL" spellcheck="false" />
           <button type="submit" class="mz-subgo">Go</button>
         </form>
-        <button class="mz-btn ms-followList-toggle" title="Save this source to Followers List">☆ Follow List</button>
-        <select class="ms-followList-select" title="Saved sources"><option value="">★ Follow List</option></select>
+        <button class="mz-btn mz-watch-toggle" title="Save this source to watch List">☆ Watch</button>
+        <select class="mz-watch-select" title="Saved sources"><option value="">★ Watchlist</option></select>
         <div class="mz-seg" data-k="filter">
           <button data-v="all">All</button><button data-v="image">Images</button><button data-v="video">Videos</button>
         </div>
@@ -422,8 +422,8 @@
       count: q(".mz-count"),
       zoomIn: q(".mz-zoom"),
       subInput: q(".mz-subinput"),
-      watchToggle: q(".ms-followList-toggle"),
-      watchSelect: q(".ms-followList-select"),
+      watchToggle: q(".mz-watch-toggle"),
+      watchSelect: q(".mz-watch-select"),
       turboBtn: q(".mz-turbo"),
       launchLabel: ui.launch.querySelector(".mz-launch-label"),
       setBody: q(".mz-setbody"),
@@ -445,7 +445,7 @@
         state.subreddit = src.label;
         ui.subInput.value = src.label;
         state.favView = false;
-        syncFollowersListUI();
+        syncwatchlistUI();
         reload();
       } else {
         setStatus("Couldn't read that. Paste a Reddit URL or type r/name, u/name, or u/name/m/feedname.");
@@ -454,11 +454,11 @@
 
     ui.watchToggle.onclick = () => {
       if (!state.subreddit) return;
-      const idx = state.followersList.findIndex((s) => s.toLowerCase() === state.subreddit.toLowerCase());
-      if (idx >= 0) state.followersList.splice(idx, 1);
-      else state.followersList.push(state.subreddit);
-      store.set("mz_followersList", state.followersList);
-      syncFollowersListUI();
+      const idx = state.watchlist.findIndex((s) => s.toLowerCase() === state.subreddit.toLowerCase());
+      if (idx >= 0) state.watchlist.splice(idx, 1);
+      else state.watchlist.push(state.subreddit);
+      store.set("mz_watchlist", state.watchlist);
+      syncwatchlistUI();
     };
 
     ui.watchSelect.onchange = () => {
@@ -467,7 +467,7 @@
         state.subreddit = val;
         ui.subInput.value = val;
         state.favView = false;
-        syncFollowersListUI();
+        syncwatchlistUI();
         reload();
         ui.watchSelect.value = "";
       }
@@ -567,14 +567,14 @@
     });
   }
 
-  function syncFollowersListUI() {
+  function syncwatchlistUI() {
     const inWatch =
-      state.subreddit && state.followersList.some((s) => s.toLowerCase() === state.subreddit.toLowerCase());
+      state.subreddit && state.watchlist.some((s) => s.toLowerCase() === state.subreddit.toLowerCase());
     ui.watchToggle.textContent = inWatch ? "★ Followed" : "☆ Add to List";
     ui.watchToggle.classList.toggle("on", !!inWatch);
     ui.watchSelect.innerHTML =
-      `<option value="">★ FollowersList (${state.followersList.length})</option>` +
-      state.followersList.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+      `<option value="">★ watchlist (${state.watchlist.length})</option>` +
+      state.watchlist.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
   }
 
   let wheelLock = 0;
@@ -739,7 +739,7 @@
             ? `<button data-a="user-fav" aria-label="${
                 isUserFollowed(it.author) ? `Unfollow u/${esc(it.author)}` : `Follow u/${esc(it.author)}`
               }" aria-pressed="${isUserFollowed(it.author)}" title="${
-                isUserFollowed(it.author) ? "Remove user from followers list" : "Add user to followers list"
+                isUserFollowed(it.author) ? "Remove user from watch list" : "Add user to watch list"
               }">${isUserFollowed(it.author) ? "★" : "☆"}</button>`
             : ""
         }<button data-a="hide">${
@@ -796,7 +796,7 @@
       card.classList.toggle("mz-followed", followed);
       if (button) {
         button.textContent = followed ? "★" : "☆";
-        button.title = followed ? "Remove user from followers list" : "Add user to followers list";
+        button.title = followed ? "Remove user from watch list" : "Add user to watch list";
         button.setAttribute("aria-label", `${followed ? "Unfollow" : "Follow"} u/${author}`);
         button.setAttribute("aria-pressed", String(followed));
       }
@@ -816,7 +816,7 @@
       viewerButton.textContent = followed ? "★ Following" : "☆ Follow user";
       viewerButton.setAttribute("aria-label", `${followed ? "Unfollow" : "Follow"} u/${item.author}`);
       viewerButton.setAttribute("aria-pressed", String(followed));
-      viewerButton.title = followed ? "Remove user from followers list" : `Add u/${item.author} to followers list`;
+      viewerButton.title = followed ? "Remove user from watch list" : `Add u/${item.author} to watch list`;
     }
   }
 
@@ -1264,7 +1264,7 @@
       items: [
         {
           type: "action", label: "Backup and restore",
-          desc: "Export your settings, favorites, hidden posts and followers list to a file, or restore from one.",
+          desc: "Export your settings, favorites, hidden posts and watch list to a file, or restore from one.",
           buttons: () => [
             { label: "⬇ Export backup", run: exportData },
             { label: "⬆ Import backup", run: pickImport },
@@ -1485,7 +1485,7 @@
     savePrefs();
     store.set("mz_favs", state.favs);
     store.set("mz_hidden", [...state.hidden].slice(-5000));
-    store.set("mz_followersList", state.followersList);
+    store.set("mz_watchlist", state.watchlist);
     store.set("mz_seen", [...state.seen]);
   }
 
@@ -1501,7 +1501,7 @@
       prefs: { filter: state.filter, sort: state.sort, time: state.time, cols: state.cols, turbo: state.turbo },
       favs: state.favs,
       hidden: [...state.hidden],
-      followersList: state.followersList,
+      watchlist: state.watchlist,
       seen: [...state.seen],
     };
 
@@ -1609,8 +1609,8 @@
         if (d.favs && typeof d.favs === "object") Object.assign(state.favs, d.favs);
         if (Array.isArray(d.hidden)) d.hidden.forEach((x) => state.hidden.add(String(x)));
         if (Array.isArray(d.seen)) d.seen.forEach((x) => state.seen.add(String(x)));
-        if (Array.isArray(d.followersList)) {
-          for (const w of d.followersList) if (typeof w === "string" && !state.followersList.includes(w)) state.followersList.push(w);
+        if (Array.isArray(d.watchlist)) {
+          for (const w of d.watchlist) if (typeof w === "string" && !state.watchlist.includes(w)) state.watchlist.push(w);
         }
         persistAll();
         compileLists();
@@ -1618,7 +1618,7 @@
         checkSubredditRoute(true);
         ui.sort.value = state.sort;
         ui.time.value = state.time;
-        syncFollowersListUI();
+        syncwatchlistUI();
         render();
         buildSettingsBody();
         toast("Backup imported");
@@ -1686,7 +1686,7 @@
     }
     state.subreddit = sub;
     ui.subInput.value = sub;
-    syncFollowersListUI();
+    syncwatchlistUI();
     if (!state.open) {
       state.open = true;
       state.favView = false;
@@ -1826,8 +1826,8 @@
     state.seen = new Set(await store.get("mz_seen", []));
     state.hidden = new Set(await store.get("mz_hidden", []));
     state.favs = await store.get("mz_favs", {});
-    const savedFollowersList = await store.get("mz_followersList", null);
-    state.followersList = (Array.isArray(savedFollowersList) ? savedFollowersList : DEFAULT_LIST)
+    const savedwatchlist = await store.get("mz_watchlist", null);
+    state.watchlist = (Array.isArray(savedwatchlist) ? savedwatchlist : DEFAULT_WATCH)
       .filter((n) => typeof n === "string" && n.trim() && n !== "r/")
       .map((n) => (n.includes("/") ? n : `r/${n}`));
     buildUI();
@@ -1836,7 +1836,7 @@
     ui.sort.value = state.sort;
     ui.time.value = state.time;
     ui.cols.value = state.cols;
-    syncFollowersListUI();
+    syncwatchlistUI();
     checkSubredditRoute();
     setInterval(checkSubredditRoute, 600);
 
