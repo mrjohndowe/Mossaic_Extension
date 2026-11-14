@@ -87,6 +87,8 @@ Mosaic supports nearly every major Reddit media type.
 - Reddit-hosted Videos
 - External Videos (where supported)
 
+Mosaic can also open image, gallery, and RedGifs posts from ReddNSFW listing pages.
+
 ---
 
 ## ⭐ Follow Users

@@ -12,7 +12,15 @@
   const WATCH_GROUPS = [["sub", "Subreddits"], ["user", "Users"], ["multi", "Custom feeds"]];
 
   function parseSource(input, allowBare) {
-    let p = String(input || "").trim().replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
+    const raw = String(input || "").trim();
+    try {
+      const external = new URL(raw);
+      if (/^(?:www\.)?reddnsfw\.com$/i.test(external.hostname) && external.protocol === "https:") {
+        external.hash = "";
+        return { kind: "reddnsfw", path: external.pathname, url: external.href, label: external.href };
+      }
+    } catch { }
+    let p = raw.replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
     if (!p) return null;
     if (p[0] !== "/") p = "/" + p;
     let m = p.match(MULTI_RE);
@@ -117,7 +125,7 @@
 
   // Label of the source for the page we're on (null if this page isn't a supported listing)
   function currentSubredditFromUrl() {
-    return parseSource(location.pathname, false)?.label || null;
+    return parseSource(location.href, false)?.label || null;
   }
 
   function userSource(author) {
@@ -283,6 +291,7 @@
   }
 
   function listingUrl(src, json) {
+    if (src.kind === "reddnsfw") return new URL(src.url);
     const url = new URL(src.path + "/", location.origin);
     const q = url.searchParams;
     if (state.sort === "top") q.set("t", state.time);
@@ -407,7 +416,83 @@
     return { items, count: entries.length, next: canContinue ? next : null };
   }
 
+  function readReddNSFWListing(doc, url) {
+    const items = [...doc.querySelectorAll(".submission-feed-item-card")].map((card) => {
+      const titleLink = card.querySelector(".content_item a.title");
+      const sourceLink = card.querySelector('.content_item .name a[href*="/s/"]');
+      const authorLink = card.querySelector('.content_item .card-author[href*="/u/"]');
+      const siteLink = card.querySelector(".card-head .avatar a[href], .card-body .main-image > a[href]");
+      const redditLink = card.querySelector('.card-footer a[href*="reddit.com/r/"][href*="/comments/"]');
+      const media = card.querySelector(".card-body .images");
+      if (!titleLink || !media) return null;
+
+      const title = titleLink.textContent.trim();
+      const sub = sourceLink?.textContent.trim() || "r/unknown";
+      const author = authorLink?.textContent.trim().replace(/^u\//i, "") || "[deleted]";
+      const permalink = webUrl(redditLink?.href) || webUrl(siteLink?.href) || url;
+      const thumbNode = media.querySelector("img:not([src*='/svg/'])");
+      const thumb = webUrl(thumbNode?.getAttribute("src"), url)?.href || null;
+      const iframe = webUrl(media.querySelector("iframe.media-iframe")?.getAttribute("src"), url);
+      const video = webUrl(media.querySelector("video source[src], video[src]")?.getAttribute("src"), url);
+      const images = [...media.querySelectorAll("img:not([src*='/svg/'])")]
+        .map((node) => webUrl(node.getAttribute("src"), url)?.href).filter(Boolean);
+      const pathParts = new URL(titleLink.href).pathname.split("/").filter(Boolean);
+      const idPart = pathParts[pathParts.length - 1] || titleLink.href;
+      const base = {
+        id: `t3_reddnsfw_${idPart}`,
+        title,
+        author,
+        sub,
+        subreddit: sub.replace(/^r\//i, ""),
+        permalink: permalink.href,
+        nsfw: true,
+        score: Number(card.querySelector(".card_item_right .count")?.getAttribute("data-count")) || 0,
+      };
+
+      if (iframe || video) {
+        return iframe
+          ? { ...base, type: "video", embed: iframe.href, thumb, w: 16, h: 9 }
+          : { ...base, type: "video", video: video.href, thumb, w: 16, h: 9 };
+      }
+      if (images.length > 1) {
+        const slides = images.map((src) => ({ kind: "image", src, thumb: src }));
+        return { ...base, type: "gallery", slides, thumb: thumb || slides[0].src, full: slides[0].src, w: 1, h: 1 };
+      }
+      const full = images[0] || thumb;
+      return full ? { ...base, type: "image", thumb: thumb || full, full, w: 1, h: 1 } : null;
+    }).filter(Boolean);
+    return { items, count: items.length };
+  }
+
+  async function loadReddNSFWListing(src, options) {
+    const baseUrl = new URL(src.url);
+    if (state.pagesLoaded === 0 && location.origin === baseUrl.origin &&
+      location.pathname === baseUrl.pathname && location.search === baseUrl.search) {
+      const currentPage = readReddNSFWListing(document, baseUrl);
+      if (currentPage.count) {
+        const currentPageNumber = Math.max(1, Number(baseUrl.searchParams.get("page")) || 1);
+        return { ...currentPage, after: String(currentPageNumber + 1) };
+      }
+    }
+
+    const pageNumber = Number(state.after) || Math.max(1, Number(baseUrl.searchParams.get("page")) || 1);
+    const requestUrl = new URL(baseUrl);
+    requestUrl.searchParams.set("page", String(pageNumber));
+    const response = await fetch(requestUrl, {
+      ...options,
+      headers: { "X-Requested-With": "XMLHttpRequest", Accept: "application/json, text/javascript, */*; q=0.01" },
+    });
+    if (!response.ok) throw new Error(`ReddNSFW returned HTTP ${response.status}`);
+    const result = await response.json();
+    if (typeof result?.html !== "string") throw new Error("ReddNSFW returned an unreadable feed page");
+    const template = document.createElement("template");
+    template.innerHTML = result.html;
+    const page = readReddNSFWListing(template.content, requestUrl);
+    return { ...page, after: result.empty || !page.count ? null : String(pageNumber + 1) };
+  }
+
   async function loadListing(src, options) {
+    if (src.kind === "reddnsfw") return loadReddNSFWListing(src, options);
     const url = listingUrl(src, false);
     if (!state.webPage) {
       const response = await fetch(listingUrl(src, true), options).catch(() => {

@@ -19,7 +19,15 @@
   const USER_RE = /^\/(?:user|u)\/([A-Za-z0-9_-]{3,20})(?:[/?#]|$)/i;
   const WATCH_GROUPS = [["sub", "Subreddits"], ["user", "Users"], ["multi", "Custom feeds"]];
   function parseSource(input, allowBare) {
-    let p = String(input || "").trim().replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
+    const raw = String(input || "").trim();
+    try {
+      const external = new URL(raw.includes("://") ? raw : `https://${raw}`);
+      if (/^(?:www\.)?reddnsfw\.com$/i.test(external.hostname) && external.protocol === "https:") {
+        external.hash = "";
+        return { kind: "reddnsfw", path: external.pathname, url: external.href, label: external.href };
+      }
+    } catch { }
+    let p = raw.replace(/^https?:\/\/(?:www\.|old\.|new\.)?reddit\.com/i, "");
     if (!p) return null;
     if (p[0] !== "/") p = "/" + p;
     let m = p.match(MULTI_RE);
@@ -34,7 +42,7 @@
     }
     return null;
   }
-  const urlFor = (src) => `https://www.reddit.com${src.path}/`;
+  const urlFor = (src) => src.kind === "reddnsfw" ? src.url : `https://www.reddit.com${src.path}/`;
 
   let tab = null;
   let onReddit = false;
@@ -164,7 +172,7 @@
     if (typed && !src) {
       const e = $("#srcErr");
       e.hidden = false;
-      e.textContent = "Couldn't read that. Paste a Reddit URL or type r/name, u/name or u/name/m/feed.";
+      e.textContent = "Enter a Reddit source or a ReddNSFW URL.";
       return;
     }
     $("#srcErr").hidden = true;
@@ -265,14 +273,8 @@
     } catch (e) {
       tab = null;
     }
-    onReddit = /^https:\/\/(?:www|old)\.reddit\.com\//i.test(tab?.url || "");
-    if (onReddit) {
-      try {
-        current = parseSource(new URL(tab.url).pathname, false);
-      } catch {
-        current = null;
-      }
-    }
+    current = parseSource(tab?.url || "", false);
+    onReddit = /^https:\/\/(?:www|old)\.reddit\.com\//i.test(tab?.url || "") || current?.kind === "reddnsfw";
     prefs = { ...DEFAULT_PREFS, ...(await store.get("mz_prefs", {})) };
     profile = await store.get(PROFILE_KEY, null);
     if (!profile || profile.age < 18) {

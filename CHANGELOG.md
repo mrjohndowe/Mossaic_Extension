@@ -21,6 +21,12 @@ All notable changes to **Mosaic for Reddit: Media Wall** are documented here.
 - Updated GitHub Actions dependencies to version 5.
 - Added automated dependency update support through Dependabot.
 
+## [2.5.6] - 2026-11-13
+
+### Added
+- Added ReddNSFW listing support for images, galleries, and embedded RedGifs videos.
+- Added the ReddNSFW domain to extension access and toolbar detection.
+
 ## [2.4.9] - 2026-10-13
 
 ### Changed

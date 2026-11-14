@@ -1,7 +1,7 @@
 // The toolbar icon opens popup.html. This worker only adds an "ON" badge to the icon
 // when the current tab is a Reddit page Mosaic can turn into a wall:
 //   /r/<sub>, /user/<name>/m/<feed> (custom feed), /user/<name>
-const SUPPORTED_RE = /^https:\/\/(?:www\.|old\.)?reddit\.com\/(?:r\/[^/]+|(?:u|user)\/[^/]+)/i;
+const SUPPORTED_RE = /^https:\/\/(?:www\.|old\.)?reddit\.com\/(?:r\/[^/]+|(?:u|user)\/[^/]+)|^https:\/\/(?:www\.)?reddnsfw\.com\//i;
 
 function updateBadge(tabId, url) {
   if (tabId == null) return;

@@ -9,7 +9,7 @@
 
 Mosaic for Reddit ("Mosaic", "the Extension", "we", "us", or "our") is a browser extension designed to provide an enhanced way to browse media content on Reddit.
 
-Mosaic transforms supported Reddit pages, including subreddits, user profiles, and custom feeds, into a media-focused masonry layout. The Extension may process images, galleries, GIFs, videos, post information, and related Reddit content in order to provide its functionality.
+Mosaic transforms supported Reddit pages, including subreddits, user profiles, and custom feeds, and ReddNSFW listing pages into a media-focused masonry layout. The Extension may process images, galleries, GIFs, videos, post information, and related content in order to provide its functionality.
 
 We respect your privacy and are committed to keeping the information processed by Mosaic limited to what is necessary to operate the Extension.
 
@@ -49,9 +49,9 @@ Mosaic does not intentionally collect or store:
 
 ## 3. Reddit Content
 
-Mosaic operates on Reddit pages that you choose to visit.
+Mosaic operates on Reddit and ReddNSFW pages that you choose to visit.
 
-The Extension may read Reddit listings to identify posts and display supported media. With “Use my Reddit login” enabled, Mosaic uses your browser's existing Reddit session for these requests, including for private feeds your account can access. Reddit determines which listings your account can view.
+The Extension may read Reddit listings to identify posts and display supported media. With “Use my Reddit login” enabled, Mosaic uses your browser's existing Reddit session for these requests, including for private feeds your account can access. Reddit determines which listings your account can view. On ReddNSFW, Mosaic reads the visible listing cards and requests additional pages from that site when you load more.
 
 Mosaic does not claim ownership of Reddit content, images, videos, GIFs, or other media displayed through the Extension. Such content remains subject to the rights and terms of its respective owners and platforms.
 
@@ -80,7 +80,7 @@ Mosaic is designed to minimize unnecessary transmission of user information.
 
 The Extension does not intentionally transmit your personal information to our servers simply because you browse Reddit using Mosaic.
 
-When Mosaic loads Reddit content or media, your browser may communicate directly with Reddit, media hosts, content delivery networks, or other third-party services required to retrieve that content.
+When Mosaic loads Reddit or ReddNSFW content or media, your browser may communicate directly with Reddit, ReddNSFW, media hosts, content delivery networks, or other third-party services required to retrieve that content.
 
 Those services operate under their own privacy policies and terms.
 
@@ -117,6 +117,7 @@ Mosaic may interact with third-party services as necessary to provide its functi
 These may include:
 
 - Reddit
+- ReddNSFW
 - Media hosting services
 - Content delivery networks
 - Browser-provided services
